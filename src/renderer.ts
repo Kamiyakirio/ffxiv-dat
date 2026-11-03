@@ -12,7 +12,17 @@
  * https://electronjs.org/docs/tutorial/security
  */
 
+import { mount } from 'svelte';
+import App from './App.svelte';
 import './index.css';
+
+const target = document.getElementById('app');
+
+if (!target) {
+  throw new Error('App mount target #app was not found');
+}
+
+mount(App, { target });
 
 console.log(
   '👋 This message is being logged by the renderer process, included via Vite',
