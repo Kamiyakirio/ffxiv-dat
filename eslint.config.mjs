@@ -19,7 +19,11 @@ export default defineConfig(
     },
   },
   {
-    files: ['*.{js,mjs,cjs,ts,mts,cts}', 'src/{main,preload}.ts'],
+    files: [
+      '*.{js,mjs,cjs,ts,mts,cts}',
+      'src/{main,preload,game-directory-scanner}.ts',
+      'tests/**/*.mjs',
+    ],
     languageOptions: {
       globals: globals.node,
     },

@@ -1,2 +1,7 @@
-<h1>💖 Hello World!</h1>
-<p>Welcome to your Electron application.</p>
+<script lang="ts">
+  import GameDirectoryScanner from './components/GameDirectoryScanner.svelte';
+</script>
+
+<main>
+  <GameDirectoryScanner />
+</main>
