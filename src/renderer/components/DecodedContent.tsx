@@ -1,484 +1,449 @@
-import { useState } from 'react';
-import type { DecodedFileDetail } from '../../shared/types';
-import JsonTree from './JsonTree';
-import ReadableContent from './ReadableContent';
-import DecodeCoverage from './DecodeCoverage';
-import type { DecodeCoverage as Coverage } from '../../shared/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import type {
+  DecodedFileDetail,
+  DecodedFileSummary,
+  EditTarget,
+} from '../../shared/types';
 import {
-  segmentNames,
-  keyActionLabel,
-  settingLabel,
-} from '../../shared/dat-labels';
+  buildFileNode,
+  hasTarget,
+  recordCount,
+  resolveNode,
+} from './browser-model';
+import type { BrowserNode } from './browser-model';
+import DetailSections from './DetailSections';
+import DecodeCoverage from './DecodeCoverage';
+import JsonTree from './JsonTree';
 
-type Row = Record<string, unknown>;
-
-function rows(value: unknown): Row[] {
-  return Array.isArray(value)
-    ? value.filter(
-        (entry): entry is Row => entry !== null && typeof entry === 'object',
-      )
-    : [];
+export interface BrowserViewState {
+  query: string;
+  page: number;
+  showEmpty: boolean;
+  scroll: number;
 }
-
-function text(value: unknown): string {
-  return value === null || value === undefined ? '' : String(value);
-}
-
-function keyLabel(value: unknown): string {
-  if (!value || typeof value !== 'object') return '未设置';
-  const key = value as Row;
-  if (key.unbound) return '未设置';
-  const names = Array.isArray(key.modifierNames)
-    ? key.modifierNames.map(String)
-    : [];
-  return [...names, String(key.keyName ?? key.keyCode ?? key.raw)]
-    .join(' + ')
-    .replaceAll('NUMPAD', '小键盘 ');
-}
-
+const defaultList: BrowserViewState = {
+  query: '',
+  page: 0,
+  showEmpty: false,
+  scroll: 0,
+};
+const Chevron = () => (
+  <svg viewBox="0 0 20 20" aria-hidden="true">
+    <path d="m7 4 6 6-6 6" />
+  </svg>
+);
 export default function DecodedContent({
   detail,
+  onEdit,
+  editor,
+  editing = false,
+  openingEditor = false,
+  path: controlledPath,
+  onNavigate,
+  onBackToFiles,
+  onOpenFile,
+  files = [],
+  canNavigate = () => true,
+  onTargetChange,
+  views,
+  onViewChange,
 }: {
   detail: DecodedFileDetail;
+  onEdit?: (target: EditTarget) => void;
+  editor?: ReactNode;
+  editing?: boolean;
+  openingEditor?: boolean;
+  path?: string[];
+  onNavigate?: (path: string[]) => boolean;
+  onBackToFiles?: () => void;
+  onOpenFile?: (file: DecodedFileSummary) => void;
+  files?: DecodedFileSummary[];
+  canNavigate?: () => boolean;
+  onTargetChange?: (target: EditTarget) => void;
+  views?: Record<string, BrowserViewState>;
+  onViewChange?: (key: string, value: BrowserViewState) => void;
 }) {
-  const [query, setQuery] = useState('');
-  const [showEmpty, setShowEmpty] = useState(false);
-  const [page, setPage] = useState(0);
-  const [group, setGroup] = useState('0');
-  const [segmentId, setSegmentId] = useState('0');
-  const [raw, setRaw] = useState(false);
-  const data = detail.data;
-  const filename = detail.summary.name.toUpperCase();
-  const mode =
-    filename === 'MACRO.DAT' || filename === 'MACROSYS.DAT'
-      ? 'macros'
-      : filename === 'KEYBIND.DAT'
-        ? 'keys'
-        : filename === 'HOTBAR.DAT'
-          ? 'hotbar'
-          : filename === 'GEARSET.DAT'
-            ? 'gearsets'
-            : filename === 'UISAVE.DAT'
-              ? 'segments'
-              : ['COMMON.DAT', 'CONTROL0.DAT', 'CONTROL1.DAT'].includes(
-                    filename,
-                  )
-                ? 'settings'
-                : 'tree';
-  const segments = rows(data.segments);
-  const pageSize = mode === 'macros' ? 10 : 40;
-  const segment =
-    segments.find((entry) => String(entry.id) === segmentId) ?? segments[0];
-  const baseRows = (() => {
-    if (mode === 'macros')
-      return rows(data.macros).filter(
-        (row) =>
-          showEmpty ||
-          row.name ||
-          (Array.isArray(row.lines) && row.lines.some(Boolean)),
-      );
-    if (mode === 'keys') return rows(data.bindings);
-    if (mode === 'settings') return rows(data.entries);
-    if (mode === 'gearsets')
-      return rows(data.records).filter((row) => showEmpty || row.exists);
-    if (mode === 'hotbar')
-      return rows(data.slots).filter(
-        (row) =>
-          String(row.groupId) === group && (showEmpty || row.commandType !== 0),
-      );
-    return [];
-  })();
-  const filtered = baseRows.filter(
-    (row) =>
-      !query ||
-      Object.values(row).some((value) =>
-        (Array.isArray(value)
-          ? value.join(' ')
-          : typeof value === 'object'
-            ? ''
-            : String(value)
+  const root = useMemo(() => buildFileNode(detail), [detail]);
+  const [localPath, setLocalPath] = useState<string[]>([]),
+    [lists, setLists] = useState<Record<string, BrowserViewState>>({});
+  const path = controlledPath ?? localPath,
+    { node, trail, validPath } = resolveNode(root, path),
+    routeKey = validPath.join('/');
+  const state = views?.[routeKey] ?? lists[routeKey] ?? defaultList;
+  const [technical, setTechnical] = useState<string | null>(null),
+    [copied, setCopied] = useState(''),
+    [error, setError] = useState('');
+  const heading = useRef<HTMLHeadingElement>(null),
+    inspector = useRef<HTMLDetailsElement>(null);
+  const children = node.children ?? [],
+    filtered = children.filter(
+      (child) =>
+        ((node === root &&
+          detail.summary.name.toUpperCase() === 'UISAVE.DAT') ||
+          state.showEmpty ||
+          !child.empty) &&
+        (!state.query ||
+          `${child.title} ${child.description ?? ''} ${child.searchText ?? ''}`
+            .toLowerCase()
+            .includes(state.query.toLowerCase())),
+    );
+  const pages = Math.max(1, Math.ceil(filtered.length / 20)),
+    page = Math.min(state.page, pages - 1);
+  const grouped =
+    node === root && detail.summary.name.toUpperCase() === 'UISAVE.DAT';
+  const displayed = grouped
+    ? filtered
+    : filtered.slice(page * 20, (page + 1) * 20);
+  const groups = [
+    ...new Set(
+      displayed.map((child) => (grouped ? (child.group ?? '其他配置') : '')),
+    ),
+  ];
+  const technicalOpen = technical === routeKey;
+  useEffect(() => {
+    heading.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: editing ? 0 : state.scroll, behavior: 'instant' });
+  }, [routeKey, editing, state.scroll]);
+  useEffect(() => {
+    if (node.editTarget) onTargetChange?.(node.editTarget);
+  }, [node, onTargetChange]);
+  function update(values: Partial<BrowserViewState>) {
+    if (onViewChange) {
+      onViewChange(routeKey, { ...state, ...values });
+      return;
+    }
+    setLists((previous) => ({
+      ...previous,
+      [routeKey]: { ...(previous[routeKey] ?? defaultList), ...values },
+    }));
+  }
+  function navigate(next: string[]) {
+    if (!canNavigate()) return;
+    update({ scroll: window.scrollY });
+    setError('');
+    if (onNavigate) {
+      onNavigate(next);
+      return;
+    }
+    setLocalPath(next);
+  }
+  function open(child: BrowserNode) {
+    const member = Array.isArray(detail.data.members)
+      ? files.find(
+          (f) => f.parentId === detail.summary.id && f.name === child.title,
         )
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-  );
-  const lastPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1);
-  const currentPage = Math.min(page, lastPage);
-  const visible = filtered.slice(
-    currentPage * pageSize,
-    (currentPage + 1) * pageSize,
-  );
-  const tableMode = ['keys', 'settings', 'hotbar'].includes(mode);
-
+      : undefined;
+    if (member && onOpenFile) {
+      onOpenFile(member);
+      return;
+    }
+    navigate([...validPath, child.key]);
+  }
+  async function copy(value: unknown, kind: string) {
+    try {
+      await navigator.clipboard.writeText(
+        typeof value === 'string' ? value : JSON.stringify(value, null, 2),
+      );
+      setCopied(routeKey + kind);
+      setError('');
+    } catch {
+      setError('复制失败，请检查剪贴板权限后重试。');
+    }
+  }
+  function showTechnical() {
+    setTechnical(routeKey);
+    window.requestAnimationFrame(() =>
+      inspector.current?.scrollIntoView?.({
+        block: 'start',
+        behavior: 'smooth',
+      }),
+    );
+  }
+  const parent = trail.at(-2);
   return (
-    <>
-      <div className="content-tabs" role="group" aria-label="结果视图">
-        <button
-          className={!raw ? 'active' : undefined}
-          aria-pressed={!raw}
-          onClick={() => setRaw(false)}
-        >
-          可读内容
-        </button>
-        <button
-          className={raw ? 'active' : undefined}
-          aria-pressed={raw}
-          onClick={() => setRaw(true)}
-        >
-          结构数据
-        </button>
-      </div>
-      {raw ? (
-        <JsonTree value={data} />
-      ) : mode === 'segments' ? (
-        <>
-          <div className="viewer-toolbar">
-            <label className="field-label">
-              配置类别
-              <select
-                value={segment ? String(segment.id) : ''}
-                onChange={(event) => setSegmentId(event.currentTarget.value)}
-              >
-                {segments.map((item, index) => (
-                  <option key={index} value={String(item.id)}>
-                    {text(segmentNames[String(item.name)] ?? item.name)} ·{' '}
-                    {text(item.name)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span className="muted">{segments.length} 个子段</span>
-          </div>
-          {segment ? (
-            <>
-              <div className="segment-heading">
-                <h3>
-                  {text(segmentNames[String(segment.name)] ?? segment.name)}
-                </h3>
-                <span className="status-badge partial">
-                  {segment.coverage
-                    ? (segment.coverage as Coverage).structureComplete
-                      ? '结构读取完整'
-                      : '结构部分识别'
-                    : segment.status === 'decoded'
-                      ? '已解析'
-                      : '含未确认字段'}
-                </span>
-              </div>
-              <DecodeCoverage
-                coverage={segment.coverage as Coverage | undefined}
-              />
-              <ReadableContent
-                key={String(segment.id)}
-                sections={(detail.readable ?? []).filter(
-                  (section) => section.sourceId === String(segment.id),
-                )}
-              />
-              <details className="technical-details">
-                <summary>子段版本与原始字节</summary>
-                <JsonTree
-                  value={{
-                    version: segment.version,
-                    offset: segment.offset,
-                    warnings: segment.warnings,
-                    rawHex: segment.rawHex,
-                    decodedHex: segment.decodedHex,
-                  }}
-                />
-              </details>
-            </>
-          ) : (
-            <p className="empty-message">
-              未能识别配置子段，请查看结构数据和解析说明。
-            </p>
-          )}
-        </>
-      ) : mode === 'tree' ? (
-        <ReadableContent sections={detail.readable ?? []} />
-      ) : (
-        <>
-          <div className="viewer-toolbar">
-            <label className="search-field">
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <circle cx="8.5" cy="8.5" r="5.5" />
-                <path d="m13 13 4 4" />
-              </svg>
-              <input
-                aria-label="搜索解码内容"
-                placeholder={
-                  mode === 'macros' ? '搜索宏名称或正文' : '搜索内容'
-                }
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.currentTarget.value);
-                  setPage(0);
-                }}
-              />
-            </label>
-            {mode === 'hotbar' && (
-              <label className="field-label">
-                存储组
-                <select
-                  value={group}
-                  onChange={(event) => {
-                    setGroup(event.currentTarget.value);
-                    setPage(0);
-                  }}
+    <div className="browser-page">
+      <nav className="breadcrumbs" aria-label="当前位置">
+        <ol>
+          <li>
+            {onBackToFiles ? (
+              <button onClick={onBackToFiles}>配置文件</button>
+            ) : (
+              <span>配置文件</span>
+            )}
+          </li>
+          {detail.summary.parentId &&
+            files
+              .filter((f) => f.id === detail.summary.parentId)
+              .map((file) => (
+                <li key={file.id}>
+                  <button onClick={() => onOpenFile?.(file)}>
+                    {file.name}
+                  </button>
+                </li>
+              ))}
+          {trail.map((item, index) => (
+            <li key={item.key}>
+              {index < trail.length - 1 ? (
+                <button
+                  disabled={openingEditor}
+                  onClick={() => navigate(validPath.slice(0, index))}
                 >
-                  {((data.groupIds as number[]) ?? []).map((id) => (
-                    <option key={id} value={String(id)}>
-                      {id === 0
-                        ? '共享'
-                        : id >= 64
-                          ? `${(data.groupNames as Record<string, string> | undefined)?.[id] ?? 'PvP'} · 存储组 ${id}`
-                          : `${(data.groupNames as Record<string, string> | undefined)?.[id] ?? '职业'} · 候选组 ${id}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {['macros', 'gearsets', 'hotbar'].includes(mode) && (
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={showEmpty}
-                  onChange={(event) => {
-                    setShowEmpty(event.currentTarget.checked);
-                    setPage(0);
-                  }}
-                />
-                显示空槽
-              </label>
-            )}
-          </div>
-          <p className="record-count">
-            {filtered.length.toLocaleString()} 条
-            {mode === 'hotbar'
-              ? showEmpty
-                ? '槽位（含空槽）'
-                : '非空槽位'
-              : '记录'}
-            {query && <> · 搜索「{query}」</>}
-          </p>
-          {!visible.length && (
-            <p className="empty-message">
-              {query
-                ? '没有匹配的内容，请尝试其他关键词。'
-                : '暂无非空记录，可勾选“显示空槽”查看全部槽位。'}
-            </p>
+                  {item.title}
+                </button>
+              ) : (
+                <span aria-current="page">{item.title}</span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
+      <header className="page-heading">
+        <div>
+          {parent && (
+            <button
+              className="back-link"
+              disabled={openingEditor}
+              onClick={() => navigate(validPath.slice(0, -1))}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m12 4-6 6 6 6" />
+              </svg>
+              返回{parent.title}
+            </button>
           )}
-          {tableMode && visible.length > 0 ? (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    {mode === 'keys' ? (
-                      <>
-                        <th>操作</th>
-                        <th>第一按键</th>
-                        <th>第二按键</th>
-                      </>
-                    ) : mode === 'hotbar' ? (
-                      <>
-                        <th>热键栏 / 槽位</th>
-                        <th>内容类型</th>
-                        <th>内容</th>
-                      </>
-                    ) : (
-                      <>
-                        <th>配置项</th>
-                        <th>值</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((row, index) => (
-                    <tr key={currentPage * pageSize + index}>
-                      {mode === 'keys' ? (
-                        <>
-                          <td>
-                            {keyActionLabel(text(row.command))}
-                            {keyActionLabel(text(row.command)) !==
-                              text(row.command) && (
-                              <small className="cell-note">
-                                {text(row.command)}
-                              </small>
-                            )}
-                          </td>
-                          <td>{keyLabel((row.keys as unknown[])?.[0])}</td>
-                          <td>{keyLabel((row.keys as unknown[])?.[1])}</td>
-                        </>
-                      ) : mode === 'hotbar' ? (
-                        <>
-                          <td>
-                            {Number(row.barIndex) + 1} /{' '}
-                            {Number(row.slotIndex) + 1}
-                          </td>
-                          <td>
-                            {text(row.commandTypeLabel ?? row.commandTypeName)}
-                          </td>
-                          <td>
-                            <span>
-                              {text(row.commandName) || '未匹配到名称'}
-                            </span>
-                            <small className="cell-note">
-                              {text(row.commandTypeName)} · ID{' '}
-                              {text(row.commandId)}
-                            </small>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>
-                            <span>{settingLabel(text(row.name))}</span>
-                            {settingLabel(text(row.name)) !==
-                              text(row.name) && (
-                              <small className="cell-note">
-                                {text(row.name)}
-                              </small>
-                            )}
-                            {!!row.section && (
-                              <small className="cell-note">
-                                {text(row.section)}
-                              </small>
-                            )}
-                          </td>
-                          <td className="code-value">{text(row.value)}</td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : mode === 'macros' ? (
-            visible.map((row, index) => (
-              <details
-                key={text(row.index)}
-                className="macro-record"
-                open={index === 0}
-              >
-                <summary>
-                  <svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="m6 3 5 5-5 5" />
-                  </svg>
-                  <h3>{text(row.name || '未命名宏')}</h3>
-                  <span className="muted">
-                    槽位 {String(row.index).padStart(2, '0')} · 图标{' '}
-                    {text(row.iconId ?? row.iconHex)}
-                  </span>
-                </summary>
-                <pre>
-                  <code>
-                    {(row.lines as string[]).join('\n').trimEnd() || '（空宏）'}
-                  </code>
-                </pre>
-              </details>
-            ))
-          ) : mode === 'gearsets' ? (
-            visible.map((row) => (
-              <details key={text(row.recordIndex)} className="gear-record">
-                <summary>
-                  <span>
-                    <strong>
-                      {row.isSavedGearsetSlot === false
-                        ? '附加结构记录（用途未确认）'
-                        : text(row.name || '未命名套装')}
-                    </strong>
-                    <small>
-                      槽位 {text(row.recordIndex)} ·{' '}
-                      {text(row.classJobName) ||
-                        `职业 ID ${text(row.classJobId)}`}
-                    </small>
-                  </span>
-                  <span>装等 {text(row.itemLevel)}</span>
-                </summary>
-                <p className="diagnostic-note">
-                  头部装备：{row.headgearVisible ? '显示' : '隐藏'} · 武器：
-                  {row.weaponsVisible ? '显示' : '隐藏'} · 面罩：
-                  {row.visorEnabled ? '开启' : '关闭'}
-                  {Array.isArray(row.glassesNames)
-                    ? ` · 眼镜：${row.glassesNames.join(' / ')}`
-                    : ''}
-                  {row.hasLinkedBanner
-                    ? ` · 肖像关联索引：${text(row.bannerIndex)}`
-                    : ''}
-                </p>
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>装备槽</th>
-                        <th>物品</th>
-                        <th>幻化</th>
-                        <th>染色</th>
-                        <th>魔晶石 / 保存属性</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows(row.items).map((item, index) => (
-                        <tr key={index}>
-                          <td>{text(item.slotLabel ?? item.slot)}</td>
-                          <td>
-                            {text(item.itemName) ||
-                              `${text(item.baseItemId)}${item.highQuality ? ' · HQ' : ''}`}
-                            <small className="cell-note">
-                              ID {text(item.itemId)}
-                            </small>
-                          </td>
-                          <td>
-                            {text(item.glamourName) || text(item.glamourId)}
-                          </td>
-                          <td>
-                            {(
-                              (item.stainNames ?? item.stainIds) as (
-                                string | number
-                              )[]
-                            ).join(' / ')}
-                          </td>
-                          <td>
-                            {Array.isArray(item.materiaDetails)
-                              ? rows(item.materiaDetails)
-                                  .map((materia) => text(materia.name))
-                                  .join(' / ') || '无'
-                              : rows(item.materia)
-                                  .filter((materia) => materia.id)
-                                  .map(
-                                    (materia) =>
-                                      `${materia.id} / 保存等级 ${materia.grade}`,
-                                  )
-                                  .join(' / ') || '无'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            ))
-          ) : null}
-          {filtered.length > pageSize && (
-            <div className="pagination">
-              <button
-                onClick={() => setPage(Math.max(0, currentPage - 1))}
-                disabled={currentPage === 0}
-              >
-                上一页
-              </button>
-              <span>
-                {currentPage + 1} / {lastPage + 1}
-              </span>
-              <button
-                onClick={() => setPage(Math.min(lastPage, currentPage + 1))}
-                disabled={currentPage >= lastPage}
-              >
-                下一页
-              </button>
-            </div>
+          <h2 ref={heading} tabIndex={-1}>
+            {editing ? '编辑 · ' : ''}
+            {node.title}
+          </h2>
+          {node.description && !editing && (
+            <p className="page-description">{node.description}</p>
           )}
-        </>
+        </div>
+        <div className="button-group">
+          {!editor &&
+            onEdit &&
+            hasTarget(node.editTarget) &&
+            (node.kind === 'record' || !children.length) && (
+              <button
+                className="primary-button"
+                disabled={openingEditor}
+                onClick={() => onEdit(node.editTarget!)}
+              >
+                {openingEditor ? '正在准备…' : '编辑'}
+              </button>
+            )}
+          {!editor && <button onClick={showTechnical}>技术数据</button>}
+        </div>
+      </header>
+      {path.length !== validPath.length && (
+        <p className="inline-notice" role="status">
+          原记录已不在当前列表中，已返回上一级。
+        </p>
       )}
-    </>
+      {error && (
+        <div className="error-message" role="alert">
+          {error}
+        </div>
+      )}
+      <div hidden={!!editor}>
+        <DetailSections sections={node.sections ?? []} />
+        {node.code !== undefined && (
+          <section className="detail-section macro-body">
+            <div className="section-heading">
+              <h3>宏正文</h3>
+              <button onClick={() => copy(node.code, 'code')}>
+                {copied === routeKey + 'code' ? '已复制' : '复制宏正文'}
+              </button>
+            </div>
+            <pre>
+              <code>{node.code || '（空宏）'}</code>
+            </pre>
+          </section>
+        )}
+        {!!children.length && (
+          <section
+            className="browser-list"
+            aria-label={node.kind === 'record' ? '子记录' : '内容列表'}
+          >
+            <div className="list-toolbar">
+              <label className="search-field">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <circle cx="8.5" cy="8.5" r="5.5" />
+                  <path d="m13 13 4 4" />
+                </svg>
+                <input
+                  aria-label={grouped ? '搜索配置类别' : '搜索当前列表'}
+                  placeholder={
+                    grouped
+                      ? '搜索类别，如肖像、邮件、收藏'
+                      : '搜索当前列表中的名称或内容'
+                  }
+                  value={state.query}
+                  onChange={(event) =>
+                    update({ query: event.currentTarget.value, page: 0 })
+                  }
+                />
+              </label>
+              {!grouped && children.some((c) => c.empty) && (
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={state.showEmpty}
+                    onChange={(event) =>
+                      update({
+                        showEmpty: event.currentTarget.checked,
+                        page: 0,
+                      })
+                    }
+                  />
+                  显示空槽
+                </label>
+              )}
+              <span className="record-count">
+                {filtered.length} {grouped ? '个类别' : '项'}
+                {state.query ? '匹配' : ''}
+              </span>
+            </div>
+            <div className={grouped ? 'category-groups' : 'record-groups'}>
+              {groups.map((group) => (
+                <section key={group} className="navigation-group">
+                  {group && <h3>{group}</h3>}
+                  <div className="navigation-list">
+                    {displayed
+                      .filter(
+                        (child) =>
+                          (grouped ? (child.group ?? '其他配置') : '') ===
+                          group,
+                      )
+                      .map((child) => (
+                        <button
+                          key={child.key}
+                          className="record-link"
+                          onClick={() => open(child)}
+                        >
+                          <span className="record-link-text">
+                            <strong>{child.title}</strong>
+                            {!grouped && child.description && (
+                              <small>{child.description}</small>
+                            )}
+                          </span>
+                          {child.children && (
+                            <span className="record-link-count">
+                              {child.readOnlyData
+                                ? '原始数据'
+                                : child.kind === 'record'
+                                  ? `${child.children.filter((c) => !c.empty).length} 项`
+                                  : recordCount(child) > 0
+                                    ? `${recordCount(child)} 条记录`
+                                    : child.sections?.some((s) => s.rows.length)
+                                      ? '设置'
+                                      : child.empty
+                                        ? '无记录'
+                                        : '查看'}
+                            </span>
+                          )}
+                          {!child.children && child.empty && (
+                            <span className="record-link-count">空槽</span>
+                          )}
+                          <Chevron />
+                        </button>
+                      ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+            {!filtered.length && (
+              <div className="page-empty">
+                <h3>{state.query ? '没有匹配的内容' : '当前没有非空记录'}</h3>
+                <p>
+                  {state.query
+                    ? '更换关键词，或清除搜索条件。'
+                    : '可勾选“显示空槽”查看空记录。'}
+                </p>
+                {state.query && (
+                  <button onClick={() => update({ query: '', page: 0 })}>
+                    清除搜索
+                  </button>
+                )}
+              </div>
+            )}
+            {!grouped && pages > 1 && (
+              <div className="pagination">
+                <button
+                  disabled={page === 0}
+                  onClick={() => update({ page: page - 1 })}
+                >
+                  上一页
+                </button>
+                <span>
+                  {page + 1} / {pages}
+                </span>
+                <button
+                  disabled={page === pages - 1}
+                  onClick={() => update({ page: page + 1 })}
+                >
+                  下一页
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+        {!children.length &&
+          !node.sections?.some((s) => s.rows.length) &&
+          node.code === undefined && (
+            <div className="page-empty">
+              <h3>{node.empty ? '没有保存的记录' : '暂时没有可读内容'}</h3>
+              <p>
+                {node.empty
+                  ? '此类别在当前文件中为空。'
+                  : '此类别已保留原始数据，尚未确认的字段可在技术数据中查看。'}
+              </p>
+              <button onClick={showTechnical}>查看技术数据</button>
+            </div>
+          )}
+      </div>
+      {editor}
+      <details
+        ref={inspector}
+        className="technical-inspector"
+        open={technicalOpen}
+        onToggle={(event) => {
+          if (event.currentTarget.open) setTechnical(routeKey);
+          else if (technicalOpen) setTechnical(null);
+        }}
+      >
+        <summary>解析说明与原始数据</summary>
+        {technicalOpen && (
+          <>
+            <DecodeCoverage
+              coverage={
+                node.coverage ?? (node === root ? detail.coverage : undefined)
+              }
+            />
+            <dl className="file-metadata">
+              <dt>源文件</dt>
+              <dd className="path-value">{detail.summary.relativePath}</dd>
+              <dt>SHA-256</dt>
+              <dd className="code-value">{detail.sha256 || '未读取'}</dd>
+              <dt>文件大小</dt>
+              <dd>{detail.summary.byteLength.toLocaleString()} 字节</dd>
+              <dt>版本</dt>
+              <dd>{String(detail.header.version ?? '不适用')}</dd>
+            </dl>
+            <button onClick={() => copy(node.raw ?? detail.data, 'json')}>
+              {copied === routeKey + 'json' ? '已复制' : '复制 JSON'}
+            </button>
+            {node === root &&
+              detail.warnings.map((warning, i) => (
+                <p className="diagnostic-note" key={i}>
+                  {warning}
+                </p>
+              ))}
+            <JsonTree value={node.raw ?? detail.data} />
+          </>
+        )}
+      </details>
+    </div>
   );
 }

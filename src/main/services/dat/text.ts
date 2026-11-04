@@ -1,5 +1,5 @@
 import { decodeUtf8, readSections } from './sections.ts';
-import { keyNames } from './key-names.ts';
+import { keyNames } from '../../../shared/key-names.ts';
 import type { DatDecodeResult } from './types.ts';
 
 export function decodeTextConfig(payload: Buffer): DatDecodeResult {

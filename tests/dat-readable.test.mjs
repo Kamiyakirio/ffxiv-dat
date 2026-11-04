@@ -182,3 +182,62 @@ test('UISAVE readable tables are selected by segment and raw metadata remains ou
   assert.equal(JSON.stringify(sections).includes('aabb'), false);
   assert.equal(JSON.stringify(sections).includes('technical'), false);
 });
+
+test('selected inventory and collection rows retain source slots across omitted empty entries', async () => {
+  const { sectionEditTarget, targetMatches } =
+    await import('../src/renderer/components/edit-target.ts');
+  const cache = detail('ITEMFDR.DAT', {
+    retainers: [],
+    saddleBag: { itemIds: [0, 0, 1], itemCounts: [0, 0, 5] },
+    premiumSaddleBag: { itemIds: [0, 2], itemCounts: [0, 1] },
+    glamourDresser: { itemIds: [] },
+    cabinet: { setBitIndices: [] },
+  });
+  const sections = readableSections(cache),
+    saddle = sections.find((s) => s.id === 'saddleBag'),
+    premium = sections.find((s) => s.id === 'premiumSaddleBag');
+  const target = sectionEditTarget(cache, saddle, 0);
+  assert.deepEqual(target.ids, ['finder.bag.item2', 'finder.bag.count2']);
+  assert.equal(targetMatches('finder.bag.item0', target), false);
+  assert.deepEqual(sectionEditTarget(cache, premium, 0).ids, [
+    'finder.bag.item71',
+    'finder.bag.count71',
+  ]);
+  const ui = detail('UISAVE.DAT', {
+    segments: [
+      {
+        id: 14,
+        name: 'ARCHVLST',
+        data: {
+          achievementWatchlist: [0, 1, 0, 2],
+          achievements: [
+            { id: 1, name: 'A' },
+            { id: 2, name: 'B' },
+          ],
+        },
+      },
+    ],
+  });
+  const section = readableSections(ui).find((s) => s.id === '14-achievements');
+  assert.deepEqual(sectionEditTarget(ui, section, 1).ids, ['ui.0.watch.3']);
+});
+
+test('scalar row source keys select the corresponding writer field instead of another setting', async () => {
+  const { sectionEditTarget } =
+    await import('../src/renderer/components/edit-target.ts');
+  const ui = detail('UISAVE.DAT', {
+    segments: [
+      {
+        id: 37,
+        name: 'PERFORM',
+        data: { beatsPerMinute: 120, displayControlGuide: true },
+      },
+    ],
+  });
+  const section = readableSections(ui)[0];
+  assert.deepEqual(section.sourceKeys, [
+    'beatsPerMinute',
+    'displayControlGuide',
+  ]);
+  assert.deepEqual(sectionEditTarget(ui, section, 1).ids, ['ui.0.settings1.3']);
+});

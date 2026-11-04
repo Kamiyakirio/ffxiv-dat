@@ -10,24 +10,23 @@ import {
   within,
 } from '@testing-library/react';
 import type {
-  DecodeProgress,
   DecodedFileDetail,
   DecodedFileSummary,
   GameDirectory,
   GameDirectoryApi,
+  DecodeProgress,
+  EditableField,
 } from '../src/shared/types';
 import App from '../src/renderer/App';
 import DecodedContent from '../src/renderer/components/DecodedContent';
 import JsonTree from '../src/renderer/components/JsonTree';
 import { readableSections } from '../src/main/services/dat/readable';
-import { decodeHotbar } from '../src/main/services/dat/layouts';
 
 afterEach(() => {
   cleanup();
   mock.restoreAll();
   Reflect.deleteProperty(window, 'gameDirectory');
 });
-
 const directory: GameDirectory = {
   path: '/game',
   fileCount: 3,
@@ -40,7 +39,6 @@ const directory: GameDirectory = {
     },
   ],
 };
-
 function summary(
   name: string,
   overrides: Partial<DecodedFileSummary> = {},
@@ -59,15 +57,16 @@ function summary(
     ...overrides,
   };
 }
-
 function detail(
   name: string,
   data: Record<string, unknown> = {},
+  id = name,
+  header: Record<string, unknown> = { version: 1 },
 ): DecodedFileDetail {
   const result: DecodedFileDetail = {
-    summary: summary(name),
+    summary: summary(name, { id }),
     data,
-    header: { version: 1 },
+    header,
     checks: [],
     warnings: [],
     sha256: 'abc123',
@@ -75,9 +74,30 @@ function detail(
   result.readable = readableSections(result);
   return result;
 }
-
+const textField = (
+  id: string,
+  label: string,
+  value = '1',
+  group = '配置项',
+  maxBytes = 20,
+): EditableField => ({ id, label, value, group, type: 'text', maxBytes });
+const numberField = (
+  id: string,
+  label: string,
+  value = 10,
+  group = '设置',
+): EditableField => ({
+  id,
+  label,
+  value,
+  group,
+  type: 'number',
+  min: 0,
+  max: 65535,
+  step: 1,
+});
 function bridge(files = [summary('COMMON.DAT'), summary('KEYBIND.DAT')]) {
-  let progressListener: ((progress: DecodeProgress) => void) | undefined;
+  let listener: ((progress: DecodeProgress) => void) | undefined;
   const unsubscribe = mock.fn();
   const defaults: GameDirectoryApi = {
     scan: async () => [directory],
@@ -91,14 +111,16 @@ function bridge(files = [summary('COMMON.DAT'), summary('KEYBIND.DAT')]) {
       cancelled: false,
     }),
     result: async (id) =>
-      detail(id, { entries: [{ name: 'BattleEffectSelf', value: 1 }] }),
+      detail(id, {
+        entries: [{ line: 1, name: 'BattleEffectSelf', value: '1' }],
+      }),
     edit: async (id) => ({ id, sha256: 'abc123', fields: [], notes: [] }),
-    names: async () => [],
     save: async () => {
-      throw new Error('No save fixture');
+      throw Error('No save fixture');
     },
+    names: async () => [],
     onProgress: (callback) => {
-      progressListener = callback;
+      listener = callback;
       return unsubscribe;
     },
   };
@@ -110,649 +132,820 @@ function bridge(files = [summary('COMMON.DAT'), summary('KEYBIND.DAT')]) {
     decode: mock.fn(defaults.decode),
     result: mock.fn(defaults.result),
     edit: mock.fn(defaults.edit),
-    names: mock.fn(defaults.names),
     save: mock.fn(defaults.save),
+    names: mock.fn(defaults.names),
     onProgress: mock.fn(defaults.onProgress),
   };
   window.gameDirectory = api;
   return {
     api,
     unsubscribe,
-    progress: (value: DecodeProgress) => progressListener?.(value),
+    progress: (value: DecodeProgress) => listener?.(value),
   };
 }
+const ui = () => within(document.body);
+const pageHeading = () =>
+  within(document.querySelector('.browser-page') ?? document.body).getByRole(
+    'heading',
+    { level: 2 },
+  );
+async function start() {
+  render(<App />);
+  await waitFor(() =>
+    assert.equal(
+      ui().getByRole('button', { name: '开始解码' }).hasAttribute('disabled'),
+      false,
+    ),
+  );
+  fireEvent.click(ui().getByRole('button', { name: '开始解码' }));
+  await ui().findByRole('heading', { name: '配置文件' });
+}
+async function openFile(name = 'COMMON.DAT') {
+  fireEvent.click(
+    ui().getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }),
+  );
+  await ui().findByRole('heading', { name });
+}
+async function openRow(name: string | RegExp) {
+  fireEvent.click(ui().getByRole('button', { name }));
+}
+async function edit() {
+  fireEvent.click(ui().getByRole('button', { name: '编辑' }));
+  return ui().findByRole('region', { name: 'DAT 编辑器' });
+}
+const settingData = {
+  entries: [
+    { line: 1, name: 'BattleEffectSelf', value: '1' },
+    { line: 49, name: 'Target', value: '48' },
+  ],
+};
 
-test('scanner discovers directories, decodes, filters, copies JSON, and unsubscribes', async () => {
-  const { api, unsubscribe } = bridge([
-    summary('COMMON.DAT'),
-    summary('KEYBIND.DAT'),
-    summary('MACROSYS.DAT', { characterId: null, category: 'shared' }),
-    summary('BACKUP.DAT', {
-      characterId: null,
-      category: 'backup',
-      parentId: 'archive',
-    }),
-  ]);
-  const writeText = mock.fn<(value: string) => Promise<void>>(async () => {});
-  Object.defineProperty(navigator, 'clipboard', {
-    value: { writeText },
-    configurable: true,
+test('decode opens a file catalog, collapses setup, and file contents use breadcrumbs', async () => {
+  const { api, unsubscribe } = bridge();
+  await start();
+  assert.equal(ui().queryByRole('heading', { name: 'COMMON.DAT' }), null);
+  assert.equal(
+    (document.querySelector('.directory-disclosure') as HTMLDetailsElement)
+      .open,
+    false,
+  );
+  await openFile();
+  assert.equal(api.result.mock.callCount(), 1);
+  await openRow(/自身战斗特效/);
+  assert.equal(pageHeading().textContent, '自身战斗特效');
+  assert.match(
+    ui().getByRole('navigation', { name: '当前位置' }).textContent ?? '',
+    /配置文件COMMON.DAT自身战斗特效/,
+  );
+  fireEvent.click(ui().getByRole('button', { name: '技术数据' }));
+  const clipboard = mock.fn(async (value: string) => {
+    assert.equal(typeof value, 'string');
   });
-  const view = render(<App />);
-  const decode = await view.findByRole('button', { name: '开始解码' });
-  fireEvent.click(view.getByRole('button', { name: '打开文件夹' }));
-  assert.equal(api.reveal.mock.calls[0].arguments[0], '/game');
-  fireEvent.click(decode);
-  await view.findByText('BattleEffectSelf');
-  assert.equal(api.decode.mock.calls[0].arguments[0], '/game');
-  assert.equal(view.queryByRole('button', { name: /MACROSYS.DAT/ }), null);
-  fireEvent.click(view.getByRole('button', { name: '复制 JSON' }));
-  await view.findByRole('button', { name: '已复制' });
-  assert.deepEqual(JSON.parse(writeText.mock.calls[0].arguments[0]), {
-    entries: [{ name: 'BattleEffectSelf', value: 1 }],
+  mock.method(navigator.clipboard, 'writeText', clipboard);
+  fireEvent.click(ui().getByRole('button', { name: '复制 JSON' }));
+  await waitFor(() => assert.equal(clipboard.mock.callCount(), 1));
+  assert.deepEqual(JSON.parse(clipboard.mock.calls[0].arguments[0]), {
+    line: 1,
+    name: 'BattleEffectSelf',
+    value: '1',
   });
-  fireEvent.change(view.getByRole('combobox', { name: '查看范围' }), {
-    target: { value: 'shared' },
-  });
-  await view.findByRole('heading', { name: 'MACROSYS.DAT' });
-  fireEvent.change(view.getByRole('combobox', { name: '查看范围' }), {
-    target: { value: 'backup' },
-  });
-  await view.findByRole('heading', { name: 'BACKUP.DAT' });
-  fireEvent.change(view.getByRole('combobox', { name: '查看范围' }), {
-    target: { value: 'all' },
-  });
-  fireEvent.change(view.getByRole('textbox', { name: '搜索文件' }), {
-    target: { value: 'keybind' },
-  });
-  await view.findByRole('heading', { name: 'KEYBIND.DAT' });
-  fireEvent.change(view.getByRole('textbox', { name: '搜索文件' }), {
-    target: { value: '' },
-  });
-  view.getByRole('heading', { name: 'KEYBIND.DAT' });
-  fireEvent.change(view.getByRole('combobox', { name: '查看范围' }), {
-    target: { value: '123456' },
-  });
-  view.getByRole('heading', { name: 'KEYBIND.DAT' });
-  fireEvent.change(view.getByRole('textbox', { name: '搜索文件' }), {
-    target: { value: 'missing' },
-  });
-  view.getByText('没有匹配的文件');
-  assert.equal(view.queryByRole('button', { name: '复制 JSON' }), null);
-  view.unmount();
+  fireEvent.click(ui().getByRole('button', { name: '配置文件' }));
+  await ui().findByRole('heading', { name: '配置文件' });
+  cleanup();
   assert.equal(unsubscribe.mock.callCount(), 1);
 });
 
-test('switching files ignores late responses and resets the content view', async () => {
-  const { api } = bridge();
-  const pending = Promise.withResolvers<DecodedFileDetail>();
-  api.result.mock.mockImplementation((id) =>
-    id === 'COMMON.DAT'
-      ? pending.promise
-      : Promise.resolve(
-          detail(id, {
-            bindings: [{ command: 'Jump', keys: [{ keyName: 'SPACE' }] }],
-          }),
-        ),
-  );
-  const view = render(<App />);
-  fireEvent.click(await view.findByRole('button', { name: '开始解码' }));
-  await waitFor(() => assert.equal(api.result.mock.callCount(), 1));
-  fireEvent.click(view.getByRole('button', { name: /KEYBIND.DAT/ }));
-  await view.findByText('Jump');
-  await act(async () =>
-    pending.resolve(
-      detail('COMMON.DAT', { entries: [{ name: 'Stale', value: 9 }] }),
-    ),
-  );
-  assert.equal(view.queryByText('Stale'), null);
-  view.getByRole('heading', { name: 'KEYBIND.DAT' });
-  fireEvent.click(view.getByRole('button', { name: '结构数据' }));
-  fireEvent.click(view.getByRole('button', { name: /COMMON.DAT/ }));
-  await view.findByText('Stale');
-  assert.equal(
-    view.getByRole('button', { name: '可读内容' }).getAttribute('aria-pressed'),
-    'true',
-  );
+test('file search includes purpose, scope and backups without flattening backup members', async () => {
+  bridge([
+    summary('UISAVE.DAT'),
+    summary('MACROSYS.DAT', { characterId: null, category: 'shared' }),
+    summary('RESTORE.DAT', {
+      id: 'archive',
+      category: 'backup',
+      characterId: null,
+    }),
+    summary('MACRO.DAT', {
+      id: 'inside',
+      parentId: 'archive',
+      category: 'backup',
+      characterId: null,
+    }),
+  ]);
+  await start();
+  fireEvent.change(ui().getByLabelText('搜索文件'), {
+    target: { value: '肖像' },
+  });
+  assert.equal(ui().getAllByRole('button', { name: /UISAVE.DAT/ }).length, 1);
+  fireEvent.change(ui().getByLabelText('搜索文件'), { target: { value: '' } });
+  fireEvent.change(ui().getByLabelText('角色与来源'), {
+    target: { value: 'backup' },
+  });
+  assert.equal(ui().getAllByRole('button', { name: /RESTORE.DAT/ }).length, 1);
+  assert.equal(ui().queryByRole('button', { name: /MACRO.DAT/ }), null);
 });
 
-test('decode progress and cancellation keep the completed results', async () => {
-  const { api, progress } = bridge();
-  const pending =
-    Promise.withResolvers<Awaited<ReturnType<GameDirectoryApi['decode']>>>();
-  api.decode.mock.mockImplementation(() => pending.promise);
-  const view = render(<App />);
-  fireEvent.click(await view.findByRole('button', { name: '开始解码' }));
-  act(() => progress({ current: 1, total: 3, filename: 'COMMON.DAT' }));
-  assert.equal((view.getByRole('progressbar') as HTMLProgressElement).value, 1);
-  fireEvent.click(view.getByRole('button', { name: '停止解码' }));
-  assert.equal(api.cancel.mock.callCount(), 1);
-  assert.equal(
-    (view.getByRole('button', { name: '正在停止' }) as HTMLButtonElement)
-      .disabled,
-    true,
+test('archive members open their own file pages with a link back to the archive', async () => {
+  const { api } = bridge([
+    summary('RESTORE.DAT', { id: 'archive', category: 'backup' }),
+    summary('COMMON.DAT', {
+      id: 'member',
+      parentId: 'archive',
+      category: 'backup',
+      relativePath: 'archive / COMMON.DAT',
+    }),
+  ]);
+  api.result.mock.mockImplementation(async (id) =>
+    id === 'archive'
+      ? {
+          ...detail(
+            'RESTORE.DAT',
+            {
+              members: [{ name: 'COMMON.DAT', length: 10, status: 'decoded' }],
+            },
+            id,
+            { format: 'character-backup' },
+          ),
+          summary: summary('RESTORE.DAT', {
+            id: 'archive',
+            category: 'backup',
+          }),
+        }
+      : {
+          ...detail('COMMON.DAT', settingData, id),
+          summary: summary('COMMON.DAT', {
+            id: 'member',
+            parentId: 'archive',
+            category: 'backup',
+            relativePath: 'archive / COMMON.DAT',
+          }),
+        },
   );
+  await start();
+  await openFile('RESTORE.DAT');
+  await openRow(/COMMON.DAT/);
+  await ui().findByRole('heading', { name: 'COMMON.DAT' });
+  const crumb = ui().getByRole('navigation', { name: '当前位置' });
+  assert.match(crumb.textContent ?? '', /RESTORE.DATCOMMON.DAT/);
+  fireEvent.click(within(crumb).getByRole('button', { name: 'RESTORE.DAT' }));
+  await ui().findByRole('heading', { name: 'RESTORE.DAT' });
+});
+
+test('late result responses cannot replace a newly opened file and loading pages have a back action', async () => {
+  const { api } = bridge();
+  let finish!: (value: DecodedFileDetail) => void;
+  api.result.mock.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await start();
+  fireEvent.click(ui().getByRole('button', { name: /COMMON.DAT/ }));
+  await ui().findByRole('status', { name: '正在读取配置' });
+  fireEvent.click(ui().getByRole('button', { name: '返回配置文件' }));
+  await openFile('KEYBIND.DAT');
+  await act(async () => finish(detail('COMMON.DAT', settingData)));
+  assert.equal(pageHeading().textContent, 'KEYBIND.DAT');
+});
+
+test('result failures provide retry and clipboard errors remain local and recoverable', async () => {
+  const { api } = bridge();
+  api.result.mock.mockImplementationOnce(async () => {
+    throw Error('读取失败');
+  });
+  await start();
+  fireEvent.click(ui().getByRole('button', { name: /COMMON.DAT/ }));
+  await ui().findByRole('heading', { name: '配置读取失败' });
+  fireEvent.click(ui().getByRole('button', { name: '重新读取' }));
+  await ui().findByRole('heading', { name: 'COMMON.DAT' });
+  fireEvent.click(ui().getByRole('button', { name: '技术数据' }));
+  mock.method(navigator.clipboard, 'writeText', async () => {
+    throw Error('denied');
+  });
+  fireEvent.click(ui().getByRole('button', { name: '复制 JSON' }));
+  await ui().findByRole('alert');
+  assert.match(ui().getByRole('alert').textContent ?? '', /复制失败/);
+});
+
+test('decode progress, cancellation and partial results stay usable', async () => {
+  const { api, progress } = bridge();
+  let finish!: (value: Awaited<ReturnType<GameDirectoryApi['decode']>>) => void;
+  api.decode.mock.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<App />);
+  await waitFor(() =>
+    assert.equal(
+      ui().getByRole('button', { name: '开始解码' }).hasAttribute('disabled'),
+      false,
+    ),
+  );
+  fireEvent.click(ui().getByRole('button', { name: '开始解码' }));
+  act(() => progress({ current: 1, total: 3, filename: 'COMMON.DAT' }));
+  assert.equal(
+    (document.querySelector('progress') as HTMLProgressElement).value,
+    1,
+  );
+  fireEvent.click(ui().getByRole('button', { name: '停止解码' }));
+  assert.equal(api.cancel.mock.callCount(), 1);
   await act(async () =>
-    pending.resolve({
+    finish({
       files: [summary('COMMON.DAT')],
-      total: 3,
       processed: 1,
+      total: 3,
       cancelled: true,
     }),
   );
-  await view.findByRole('heading', { name: '已停止，保留已完成结果' });
-  await view.findByText('BattleEffectSelf');
+  await ui().findByText(/已停止，保留已完成结果/);
+  await openFile();
 });
 
-test('scan failures allow manual selection and directory changes clear results', async () => {
+test('scan failures allow manual selection and browser-only mode disables native actions', async () => {
   const { api } = bridge();
-  api.scan.mock.mockImplementation(async () => {
-    throw new Error('Abort scan');
+  api.scan.mock.mockImplementationOnce(async () => {
+    throw Error('无访问权限');
   });
-  api.choose.mock.mockImplementation(async () => ({
-    ...directory,
-    path: '/manual',
-  }));
-  const view = render(<App />);
-  await view.findByText('扫描已停止，可以手动选择文件夹。');
-  fireEvent.click(view.getByRole('button', { name: '手动选择文件夹' }));
-  fireEvent.click(await view.findByRole('button', { name: '开始解码' }));
-  await view.findByText('BattleEffectSelf');
-  api.choose.mock.mockImplementation(async () => ({
-    ...directory,
-    path: '/another',
-  }));
-  fireEvent.click(view.getByRole('button', { name: '选择文件夹' }));
-  await view.findByText('/another', { selector: 'p' });
-  assert.equal(view.queryByRole('heading', { name: '解码结果' }), null);
-  fireEvent.change(view.getByRole('combobox', { name: '找到 2 个配置目录' }), {
-    target: { value: '/manual' },
-  });
-  view.getByText('/manual', { selector: 'p' });
+  render(<App />);
+  await ui().findByRole('alert');
+  fireEvent.click(ui().getAllByRole('button', { name: '选择文件夹' })[0]);
+  await ui().findByText('测试角色');
+  assert.equal(api.choose.mock.callCount(), 1);
+  cleanup();
+  Reflect.deleteProperty(window, 'gameDirectory');
+  render(<App />);
+  assert.match(ui().getByRole('alert').textContent ?? '', /Electron/);
+  assert.equal(
+    ui().getByRole('button', { name: '扫描游戏目录' }).hasAttribute('disabled'),
+    true,
+  );
 });
 
-test('detail and clipboard errors are displayed without losing the file list', async () => {
+test('settings searches use source line identities and survive editing, cancel and returning to the list', async () => {
   const { api } = bridge();
-  api.result.mock.mockImplementation(async () => {
-    throw new Error(
-      "Error invoking remote method 'game-directory:result': Error: missing result",
-    );
+  api.result.mock.mockImplementation(async () =>
+    detail('COMMON.DAT', settingData),
+  );
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [
+      textField('config.0', 'Other'),
+      textField('config.48', 'Target', '48'),
+    ],
+  }));
+  mock.method(window, 'confirm', () => true);
+  await start();
+  await openFile();
+  fireEvent.change(ui().getByLabelText('搜索当前列表'), {
+    target: { value: 'Target' },
   });
-  const view = render(<App />);
-  fireEvent.click(await view.findByRole('button', { name: '开始解码' }));
-  await view.findByText('missing result');
-  api.result.mock.mockImplementation(async (id) => detail(id));
-  fireEvent.click(view.getByRole('button', { name: /KEYBIND.DAT/ }));
-  Object.defineProperty(navigator, 'clipboard', {
-    value: {
-      writeText: async () => {
-        throw new Error('denied');
+  await openRow(/Target/);
+  await edit();
+  const input = ui().getByLabelText(/Target/);
+  assert.equal((input as HTMLInputElement).value, '48');
+  assert.equal(ui().queryByLabelText(/Other/), null);
+  fireEvent.change(input, { target: { value: '49' } });
+  fireEvent.click(ui().getByRole('button', { name: '取消编辑' }));
+  assert.equal(pageHeading().textContent, 'Target');
+  fireEvent.click(ui().getByRole('button', { name: '返回COMMON.DAT' }));
+  assert.equal(
+    (ui().getByLabelText('搜索当前列表') as HTMLInputElement).value,
+    'Target',
+  );
+});
+
+test('saving validates the selected record, refreshes hashes and keeps its page with backup feedback', async () => {
+  const { api } = bridge();
+  let value = '1';
+  api.result.mock.mockImplementation(async (id) =>
+    detail(
+      'COMMON.DAT',
+      { entries: [{ line: 1, name: 'BattleEffectSelf', value }] },
+      id,
+    ),
+  );
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [textField('config.0', '自身战斗特效', value)],
+  }));
+  api.save.mock.mockImplementation(async () => {
+    value = '2';
+    return {
+      report: {
+        files: [summary('COMMON.DAT', { id: 'saved' })],
+        processed: 1,
+        total: 1,
+        cancelled: false,
       },
+      selectedId: 'saved',
+      backupPath: '/game/original.backup',
+    };
+  });
+  await start();
+  await openFile();
+  await openRow(/自身战斗特效/);
+  await edit();
+  fireEvent.change(ui().getByLabelText(/自身战斗特效/), {
+    target: { value: '2' },
+  });
+  fireEvent.click(ui().getByRole('button', { name: '保存并备份' }));
+  await ui().findByText('保存成功，已备份原文件。');
+  assert.equal(pageHeading().textContent, '自身战斗特效');
+  assert.equal(ui().queryByRole('region', { name: 'DAT 编辑器' }), null);
+  assert.deepEqual(api.save.mock.calls[0].arguments, [
+    {
+      id: 'COMMON.DAT',
+      sha256: 'abc123',
+      changes: [{ id: 'config.0', value: '2' }],
     },
-    configurable: true,
-  });
-  fireEvent.click(await view.findByRole('button', { name: '复制 JSON' }));
-  await view.findByText('复制失败，请检查剪贴板权限后重试。');
-  view.getByRole('button', { name: /COMMON.DAT/ });
+  ]);
+  assert.equal(api.result.mock.calls.at(-1)?.arguments[0], 'saved');
 });
 
-test('browser-only rendering explains the missing Electron bridge', () => {
-  const view = render(<App />);
-  view.getByRole('alert');
-  view.getByText('请在 Electron 桌面应用中打开此页面。');
-  assert.equal(view.queryByRole('button', { name: '停止扫描' }), null);
-});
-
-test('macro pagination, search and empty-slot controls work', () => {
-  const macros = Array.from({ length: 12 }, (_, index) => ({
-    index,
-    name: `Macro ${index}`,
-    iconId: index,
-    lines: [`/echo ${index}`],
+test('invalid UTF-8 byte limits block saving and a failed save preserves the draft', async () => {
+  const { api } = bridge();
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [textField('config.0', '自身战斗特效', '1', '配置项', 4)],
   }));
-  macros.push({ index: 12, name: '', iconId: 0, lines: [] });
-  const view = render(
-    <DecodedContent detail={detail('MACRO.DAT', { macros })} />,
+  api.save.mock.mockImplementation(async () => {
+    throw Error('文件已被游戏修改');
+  });
+  await start();
+  await openFile();
+  await openRow(/自身战斗特效/);
+  await edit();
+  const input = ui().getByLabelText(/自身战斗特效/);
+  fireEvent.change(input, { target: { value: '中文' } });
+  assert.equal(
+    ui().getByRole('button', { name: '保存并备份' }).hasAttribute('disabled'),
+    true,
   );
-  assert.equal(view.container.querySelectorAll('.macro-record').length, 10);
-  fireEvent.click(view.getByRole('button', { name: '下一页' }));
-  assert.equal(view.container.querySelectorAll('.macro-record').length, 2);
-  fireEvent.change(view.getByRole('textbox', { name: '搜索解码内容' }), {
-    target: { value: 'Macro 0' },
-  });
-  view.getByRole('heading', { name: 'Macro 0' });
-  assert.equal(view.queryByRole('button', { name: '上一页' }), null);
-  fireEvent.change(view.getByRole('textbox', { name: '搜索解码内容' }), {
-    target: { value: '' },
-  });
-  fireEvent.click(view.getByRole('checkbox', { name: '显示空槽' }));
-  fireEvent.click(view.getByRole('button', { name: '下一页' }));
-  view.getByRole('heading', { name: '未命名宏' });
+  fireEvent.change(input, { target: { value: '2' } });
+  fireEvent.click(ui().getByRole('button', { name: '保存并备份' }));
+  await ui().findByText('文件已被游戏修改');
+  assert.equal((input as HTMLInputElement).value, '2');
 });
 
-test('key bindings and settings render readable tables', () => {
-  const view = render(
-    <DecodedContent
-      detail={detail('KEYBIND.DAT', {
-        bindings: [
-          {
-            command: 'Jump',
-            keys: [
-              { keyName: 'NUMPAD0', modifierNames: ['CTRL'] },
-              { unbound: true },
-            ],
-          },
-        ],
-      })}
-    />,
-  );
-  view.getByText('CTRL + 小键盘 0');
-  view.getByText('未设置');
-  view.rerender(
-    <DecodedContent
-      key="settings"
-      detail={detail('CONTROL0.DAT', {
-        entries: [{ name: 'MoveMode', section: 'Controls', value: 1 }],
-      })}
-    />,
-  );
-  view.getByText('MoveMode');
-  view.getByText('Controls');
-  view.getByRole('cell', { name: '1' });
-});
-
-test('hotbar groups and empty slots filter independently', () => {
-  const view = render(
-    <DecodedContent
-      detail={detail('HOTBAR.DAT', {
-        groupIds: [0, 65],
-        slots: [
-          {
-            groupId: 0,
-            barIndex: 0,
-            slotIndex: 0,
-            commandType: 1,
-            commandTypeName: 'Action',
-            commandId: 100,
-          },
-          {
-            groupId: 0,
-            barIndex: 0,
-            slotIndex: 1,
-            commandType: 0,
-            commandTypeName: 'Empty',
-            commandId: 0,
-          },
-          {
-            groupId: 65,
-            barIndex: 1,
-            slotIndex: 0,
-            commandType: 1,
-            commandTypeName: 'PvP',
-            commandId: 200,
-          },
-        ],
-      })}
-    />,
-  );
-  view.getByText('Action');
-  assert.equal(view.queryByText('Empty'), null);
-  fireEvent.click(view.getByRole('checkbox', { name: '显示空槽' }));
-  view.getByText('Empty');
-  fireEvent.change(view.getByRole('combobox', { name: '存储组' }), {
-    target: { value: '65' },
+test('breadcrumb navigation protects unsaved changes and browser Back uses the same guard', async () => {
+  const { api } = bridge();
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [textField('config.0', '自身战斗特效')],
+  }));
+  const confirm = mock.method(window, 'confirm', () => false),
+    go = mock.method(window.history, 'go', () => {});
+  await start();
+  await openFile();
+  await openRow(/自身战斗特效/);
+  await edit();
+  fireEvent.change(ui().getByLabelText(/自身战斗特效/), {
+    target: { value: '2' },
   });
-  view.getByText('PvP');
-  assert.equal(view.queryByText('Action'), null);
+  fireEvent.click(ui().getByRole('button', { name: '返回COMMON.DAT' }));
+  assert.equal(confirm.mock.callCount(), 1);
+  assert.equal(pageHeading().textContent, '编辑 · 自身战斗特效');
+  const current = window.history.state.datRoute;
+  act(() =>
+    window.dispatchEvent(
+      new window.PopStateEvent('popstate', {
+        state: {
+          datRoute: {
+            index: current.index - 1,
+            route: { file: 'character/COMMON.DAT', path: [] },
+          },
+        },
+      }),
+    ),
+  );
+  assert.equal(confirm.mock.callCount(), 2);
+  assert.equal(go.mock.callCount(), 1);
+  confirm.mock.mockImplementation(() => true);
+  fireEvent.click(ui().getByRole('button', { name: '返回COMMON.DAT' }));
+  await ui().findByRole('heading', { name: 'COMMON.DAT' });
+  assert.equal(ui().queryByRole('region', { name: 'DAT 编辑器' }), null);
 });
 
-test('gearsets show equipment, glamour, quality and dyes', () => {
-  const view = render(
-    <DecodedContent
-      detail={detail('GEARSET.DAT', {
-        records: [
-          {
-            recordIndex: 0,
-            exists: true,
-            name: 'Paladin',
-            classJobId: 19,
-            itemLevel: 700,
-            items: [
+test('browser Back returns to the previous page with its search filter', async () => {
+  const { api } = bridge();
+  api.result.mock.mockImplementation(async () =>
+    detail('COMMON.DAT', settingData),
+  );
+  await start();
+  await openFile();
+  fireEvent.change(ui().getByLabelText('搜索当前列表'), {
+    target: { value: 'Target' },
+  });
+  await openRow(/Target/);
+  act(() => window.history.back());
+  await ui().findByRole('heading', { name: 'COMMON.DAT' });
+  assert.equal(
+    (ui().getByLabelText('搜索当前列表') as HTMLInputElement).value,
+    'Target',
+  );
+});
+
+test('UISAVE exposes categories as pages and each portrait has all its own detail sections', async () => {
+  const { api } = bridge([summary('UISAVE.DAT')]);
+  api.result.mock.mockImplementation(async () =>
+    detail('UISAVE.DAT', {
+      segments: [
+        { id: 0, name: 'LETTER', data: { records: [] } },
+        {
+          id: 23,
+          name: 'BANNER',
+          data: {
+            chunks: [
               {
-                slot: 'Weapon',
-                baseItemId: 42,
-                highQuality: true,
-                glamourId: 25,
-                stainIds: [1, 2],
+                records: [
+                  {
+                    recordIndex: 0,
+                    timelineName: '冲刺',
+                    cameraPosition: [1, 2, 3],
+                  },
+                ],
+              },
+              {
+                records: [
+                  {
+                    recordIndex: 7,
+                    timelineName: '绅士风度',
+                    cameraPosition: [4, 5, 6],
+                    directionalLightingColourHex: '#2035ff',
+                  },
+                ],
               },
             ],
           },
-        ],
-      })}
-    />,
+        },
+      ],
+    }),
   );
-  view.getByText('Paladin');
-  view.getByText('42 · HQ');
-  view.getByText('1 / 2');
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [
+      numberField('ui.1.banner.0.0.8.0', '镜头位置 X', 1),
+      numberField('ui.1.banner.1.7.8.0', '镜头位置 X', 4),
+      numberField('ui.1.banner.1.7.2', '背景', 3),
+    ],
+  }));
+  await start();
+  await openFile('UISAVE.DAT');
+  assert.equal(ui().queryByLabelText('配置类别'), null);
+  await openRow(/^肖像/);
+  assert.equal(pageHeading().textContent, '肖像');
+  await openRow(/^肖像 8/);
+  assert.equal(pageHeading().textContent, '肖像 8');
+  assert.equal(
+    ui()
+      .getAllByRole('region')
+      .filter((region) => region.getAttribute('aria-label') === '镜头与视线')
+      .length,
+    1,
+  );
+  assert.match(
+    ui().getByRole('region', { name: '镜头与视线' }).textContent ?? '',
+    /X 4 · Y 5 · Z 6/,
+  );
+  assert.equal(ui().queryByLabelText('查看内容'), null);
+  assert.equal(ui().queryByText('1 / 2 / 3'), null);
+  await edit();
+  assert.equal(
+    (ui().getByLabelText(/镜头位置 X/) as HTMLInputElement).value,
+    '4',
+  );
+  assert.equal(ui().getAllByLabelText(/镜头位置 X/).length, 1);
+  fireEvent.click(ui().getByRole('button', { name: '取消编辑' }));
+  assert.equal(pageHeading().textContent, '肖像 8');
+  fireEvent.click(ui().getByRole('button', { name: '返回肖像' }));
+  assert.equal(pageHeading().textContent, '肖像');
 });
 
-test('UISAVE categories show readable records while preserving technical data in the raw view', () => {
+test('board pages lead to individual object pages and keep unknown arguments in technical data', async () => {
   const view = render(
     <DecodedContent
       detail={detail('UISAVE.DAT', {
         segments: [
           {
-            id: 3,
-            name: 'BANNER',
-            status: 'decoded',
-            data: { records: [{ name: 'Portrait' }], rawHex: 'aabb' },
-          },
-          {
-            id: 4,
+            id: 28,
             name: 'TOFU',
-            status: 'partial',
-            data: { records: [{ name: 'Board' }] },
+            data: {
+              chunks: [
+                {
+                  id: 2,
+                  data: {
+                    records: [
+                      {
+                        title: '测试战术',
+                        objects: [
+                          {
+                            objectType: 9,
+                            objectName: '圆形范围',
+                            position: { x: 10, y: 20 },
+                            angle: 30,
+                            scale: 100,
+                            rgba: [255, 0, 0, 0],
+                            argsA: 321,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
           },
         ],
       })}
     />,
   );
+  fireEvent.click(view.getByRole('button', { name: /战术板/ }));
+  fireEvent.click(view.getByRole('button', { name: /测试战术/ }));
+  fireEvent.click(view.getByRole('button', { name: /圆形范围/ }));
   assert.equal(
-    (view.getByRole('combobox', { name: '配置类别' }) as HTMLSelectElement)
-      .value,
-    '3',
+    view.getByRole('heading', { level: 2 }).textContent,
+    '1 · 圆形范围',
   );
-  assert.equal(view.queryByText('aabb'), null);
-  view.getByRole('cell', { name: 'Portrait' });
-  fireEvent.change(view.getByRole('combobox', { name: '配置类别' }), {
-    target: { value: '4' },
-  });
-  view.getByRole('cell', { name: 'Board' });
-  assert.equal(view.queryByRole('cell', { name: 'Portrait' }), null);
-  fireEvent.click(view.getByRole('button', { name: '结构数据' }));
-  view.getByRole('button', { name: 'segments 2 项' });
+  assert.match(
+    view.getByRole('region', { name: '对象属性' }).textContent ?? '',
+    /X 10 · Y 20/,
+  );
+  assert.equal(view.queryByText('321'), null);
+  fireEvent.click(view.getByRole('button', { name: '技术数据' }));
+  assert.match(view.container.textContent ?? '', /argsA/);
 });
 
-test('JSON tree lazily expands containers, pages entries and expands long text', () => {
-  const value = Object.fromEntries(
-    Array.from({ length: 41 }, (_, index) => [`field${index}`, index]),
-  );
-  const view = render(<JsonTree value={value} />);
-  assert.equal(view.queryByText('field40'), null);
-  fireEvent.click(view.getByRole('button', { name: /继续显示 40 项/ }));
-  view.getByText('field40');
-  view.rerender(
-    <JsonTree key="long" value={{ records: [{ text: 'x'.repeat(500) }] }} />,
-  );
-  assert.equal(view.queryByText('x'.repeat(300)), null);
-  fireEvent.click(view.getByRole('button', { name: '记录 1 项' }));
-  fireEvent.click(view.getByRole('button', { name: '[0] 1 字段' }));
-  fireEvent.click(view.getByRole('button', { name: '展开文本（500 字符）' }));
-  view.getByText('x'.repeat(500));
-});
-
-test('hotbar readable view shows Limit Break rather than only GeneralAction and 3', () => {
-  const data = decodeHotbar(Buffer.from([3, 0, 0, 0, 0, 5, 5, 10]), 4).data;
-  const view = render(<DecodedContent detail={detail('HOTBAR.DAT', data)} />);
-  view.getByRole('cell', { name: '通用技能' });
-  view.getByText('极限技');
-  view.getByText('GeneralAction · ID 3');
-  fireEvent.change(view.getByRole('textbox', { name: '搜索解码内容' }), {
-    target: { value: '极限技' },
-  });
-  view.getByText('极限技');
-});
-
-test('item finder readable view pairs the item name with its quantity and hides format fields', () => {
-  const view = render(
-    <DecodedContent
-      detail={detail('ITEMFDR.DAT', {
-        retainers: [],
-        retainerFormatVersion: 200,
-        saddleBagFormatVersion: 200,
-        saddleBag: { itemIds: [0, 4650], itemCounts: [0, 23] },
-        premiumSaddleBag: { itemIds: [], itemCounts: [] },
-        glamourDresser: { itemIds: [] },
-        cabinet: { setBitIndices: [] },
-      })}
-    />,
-  );
-  const row = view.getByRole('row', { name: /水煮蛋/ });
-  within(row).getByRole('cell', { name: '23' });
-  within(row).getByRole('cell', { name: '1 / 2' });
-  assert.equal(view.queryByText('retainerFormatVersion'), null);
-  assert.equal(view.queryByRole('button', { name: /物品 ID/ }), null);
-  fireEvent.click(view.getByRole('button', { name: '结构数据' }));
-  view.getByText('retainerFormatVersion');
-});
-
-test('coverage distinguishes resolved fields from specific unknown fields instead of warning about every field', () => {
-  const value = detail('UISAVE.DAT', {
-    segments: [
-      {
-        id: 23,
-        name: 'BANNER',
-        status: 'partial',
-        coverage: {
-          structureComplete: true,
-          knownFields: ['镜头位置', '背景名称'],
-          candidateFields: [],
-          unknownFields: [
-            {
-              field: 'tag 24',
-              reason: '此标签用途尚未定义。',
-              kind: 'meaning',
-            },
-          ],
-        },
-        data: {
-          chunks: [
-            {
-              records: [
-                {
-                  recordIndex: 0,
-                  backgroundName: '四边形',
-                  timelineName: '绅士风度',
-                },
-              ],
-            },
-          ],
-        },
-      },
-    ],
-  });
-  const view = render(<DecodedContent detail={value} />);
-  view.getByText('结构读取完整');
-  view.getByText(/已解释 2 类字段/);
-  view.getByText(/1 项含义或关联待核对/);
-  view.getByText('逐项解析范围与剩余缺口');
-  view.getByRole('cell', { name: '四边形' });
-  view.getByRole('cell', { name: '绅士风度' });
-  assert.equal(view.queryByText('含未确认字段'), null);
-});
-
-test('editing a file previews changes, saves with its hash and refreshes the selected result', async () => {
-  const { api } = bridge([summary('COMMON.DAT')]);
-  api.edit.mock.mockImplementation(async (id) => ({
-    id,
-    sha256: 'abc123',
-    notes: ['保存前请退出游戏'],
-    fields: [
-      {
-        id: 'config.0',
-        group: '配置项',
-        label: '测试设置',
-        type: 'text',
-        value: '1',
-        maxBytes: 20,
-      },
-    ],
-  }));
-  api.save.mock.mockImplementation(async () => ({
-    report: {
-      files: [summary('COMMON.DAT', { id: 'saved' })],
-      processed: 1,
-      total: 1,
-      cancelled: false,
-    },
-    selectedId: 'saved',
-    backupPath: '/game/COMMON.DAT.backup-test',
-  }));
-  render(<App />);
-  await waitFor(() =>
-    assert.equal(
-      within(document.body)
-        .getByRole('button', { name: '开始解码' })
-        .hasAttribute('disabled'),
-      false,
-    ),
-  );
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: '开始解码' }),
-  );
-  fireEvent.click(
-    await within(document.body).findByRole('button', { name: '编辑' }),
-  );
-  const input = await within(document.body).findByLabelText(/测试设置/);
-  fireEvent.change(input, { target: { value: '200' } });
-  assert.match(document.body.textContent ?? '', /1 项未保存修改/);
-  assert.match(document.body.textContent ?? '', /1 → 200/);
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: '保存并备份' }),
-  );
-  await within(document.body).findByText(/保存成功。原文件备份/);
-  assert.deepEqual(api.save.mock.calls[0].arguments, [
-    {
-      id: 'COMMON.DAT',
-      sha256: 'abc123',
-      changes: [{ id: 'config.0', value: '200' }],
-    },
-  ]);
-  assert.equal(api.result.mock.calls.at(-1)?.arguments[0], 'saved');
-  assert.equal(
-    within(document.body).queryByRole('region', { name: 'DAT 编辑器' }),
-    null,
-  );
-});
-
-test('editor rejects invalid byte lengths, retains drafts on save failure and guards unsaved navigation', async () => {
-  const { api } = bridge();
-  api.edit.mock.mockImplementation(async (id) => ({
-    id,
-    sha256: 'abc123',
-    notes: [],
-    fields: [
-      {
-        id: 'config.0',
-        group: '配置项',
-        label: '测试设置',
-        type: 'text',
-        value: '1',
-        maxBytes: 4,
-      },
-    ],
-  }));
-  api.save.mock.mockImplementation(async () => {
-    throw new Error('文件已被游戏修改');
-  });
-  const confirm = mock.method(window, 'confirm', () => false);
-  render(<App />);
-  await waitFor(() =>
-    assert.equal(
-      within(document.body)
-        .getByRole('button', { name: '开始解码' })
-        .hasAttribute('disabled'),
-      false,
-    ),
-  );
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: '开始解码' }),
-  );
-  fireEvent.click(
-    await within(document.body).findByRole('button', { name: '编辑' }),
-  );
-  const input = await within(document.body).findByLabelText(/测试设置/);
-  fireEvent.change(input, { target: { value: '中文' } });
-  assert.equal(
-    within(document.body)
-      .getByRole('button', { name: '保存并备份' })
-      .hasAttribute('disabled'),
-    true,
-  );
-  fireEvent.change(input, { target: { value: '2' } });
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: '保存并备份' }),
-  );
-  await within(document.body).findByText('文件已被游戏修改');
-  assert.equal((input as HTMLInputElement).value, '2');
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: /KEYBIND.DAT/ }),
-  );
-  assert.equal(confirm.mock.callCount(), 1);
-  assert.equal((input as HTMLInputElement).value, '2');
-  confirm.mock.mockImplementation(() => true);
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: /KEYBIND.DAT/ }),
-  );
-  await waitFor(() =>
-    assert.equal(within(document.body).queryByLabelText(/测试设置/), null),
-  );
-  assert.equal(api.result.mock.calls.at(-1)?.arguments[0], 'KEYBIND.DAT');
-});
-
-test('editor reference lookup selects named data instead of requiring a raw numeric ID', async () => {
+test('gearset and equipment pages edit their own fields and name lookup selects a real ID', async () => {
   const { api } = bridge([summary('GEARSET.DAT')]);
+  api.result.mock.mockImplementation(async () =>
+    detail('GEARSET.DAT', {
+      records: [
+        {
+          recordIndex: 3,
+          exists: true,
+          name: '套装 A',
+          classJobName: '骑士',
+          items: [
+            {
+              slot: 'MainHand',
+              slotLabel: '主手',
+              itemId: 1,
+              itemName: '武器',
+              stainNames: ['无染色'],
+              materiaDetails: [],
+            },
+            {
+              slot: 'OffHand',
+              slotLabel: '副手',
+              itemId: 2,
+              itemName: '盾',
+              stainNames: ['素雪白'],
+              materiaDetails: [{ name: '暴击 +447' }],
+            },
+          ],
+        },
+      ],
+    }),
+  );
   api.edit.mock.mockImplementation(async (id) => ({
     id,
     sha256: 'abc123',
     notes: [],
     fields: [
+      textField('gear.3.name', '名称', '套装 A'),
       {
-        id: 'item',
-        group: '装备',
-        label: '主手物品',
-        type: 'number',
-        value: 0,
-        min: 0,
-        max: 4294967295,
-        step: 1,
+        ...numberField('gear.3.items.1.item', '副手物品', 2),
         reference: 'Item',
       },
+      numberField('gear.3.items.0.item', '主手物品', 1),
     ],
   }));
   api.names.mock.mockImplementation(async () => [
-    { value: 123, label: '测试武器' },
+    { value: 123, label: '测试盾牌' },
   ]);
-  render(<App />);
-  await waitFor(() =>
-    assert.equal(
-      within(document.body)
-        .getByRole('button', { name: '开始解码' })
-        .hasAttribute('disabled'),
-      false,
-    ),
+  await start();
+  await openFile('GEARSET.DAT');
+  await openRow(/^套装 A/);
+  await openRow(/^副手/);
+  assert.match(
+    ui().getByRole('region', { name: '装备信息' }).textContent ?? '',
+    /暴击 \+447/,
   );
-  fireEvent.click(
-    within(document.body).getByRole('button', { name: '开始解码' }),
-  );
-  fireEvent.click(
-    await within(document.body).findByRole('button', { name: '编辑' }),
-  );
-  fireEvent.click(
-    await within(document.body).findByRole('button', { name: '按名称查找' }),
-  );
-  fireEvent.change(within(document.body).getByLabelText('主手物品名称查找'), {
-    target: { value: '武器' },
+  await edit();
+  assert.equal(ui().queryByLabelText(/主手物品/), null);
+  fireEvent.click(ui().getByRole('button', { name: '按名称查找' }));
+  fireEvent.change(ui().getByLabelText('副手物品名称查找'), {
+    target: { value: '盾' },
   });
-  fireEvent.click(
-    await within(document.body).findByRole('button', {
-      name: '测试武器 · 123',
-    }),
-  );
+  fireEvent.click(await ui().findByRole('button', { name: '测试盾牌 · 123' }));
   assert.equal(
-    (within(document.body).getByLabelText(/主手物品装备/) as HTMLInputElement)
-      .value,
+    (ui().getByLabelText(/副手物品/) as HTMLInputElement).value,
     '123',
   );
-  assert.deepEqual(api.names.mock.calls[0].arguments, ['Item', '武器']);
+});
+
+test('macro list pagination, body search, empty slots and standalone body copying work', async () => {
+  const macros = Array.from({ length: 22 }, (_, index) => ({
+    index,
+    name: index === 21 ? '' : `宏 ${index + 1}`,
+    lines: [index === 20 ? '/echo 特定命令' : '/echo hi'],
+    iconId: 1,
+  }));
+  macros[21].lines = [];
+  const view = render(
+    <DecodedContent detail={detail('MACRO.DAT', { macros })} />,
+  );
+  assert.equal(view.container.querySelectorAll('.record-link').length, 20);
+  fireEvent.click(view.getByRole('button', { name: '下一页' }));
+  assert.equal(view.container.querySelectorAll('.record-link').length, 1);
+  fireEvent.click(view.getByLabelText('显示空槽'));
+  fireEvent.click(view.getByRole('button', { name: '下一页' }));
+  assert.equal(view.container.querySelectorAll('.record-link').length, 2);
+  fireEvent.change(view.getByLabelText('搜索当前列表'), {
+    target: { value: '特定命令' },
+  });
+  fireEvent.click(view.getByRole('button', { name: /宏 21/ }));
+  assert.match(
+    view.container.querySelector('pre')?.textContent ?? '',
+    /特定命令/,
+  );
+  const copy = mock.fn(async (value: string) => {
+    assert.equal(typeof value, 'string');
+  });
+  mock.method(navigator.clipboard, 'writeText', copy);
+  fireEvent.click(view.getByRole('button', { name: '复制宏正文' }));
+  await waitFor(() => assert.equal(copy.mock.callCount(), 1));
+  assert.equal(copy.mock.calls[0].arguments[0], '/echo 特定命令');
+});
+
+test('hotbar groups, bars and slots form separate pages with human command names', () => {
+  const view = render(
+    <DecodedContent
+      detail={detail('HOTBAR.DAT', {
+        groupIds: [0],
+        groupNames: {},
+        slots: [
+          {
+            groupId: 0,
+            barIndex: 5,
+            slotIndex: 5,
+            commandType: 10,
+            commandTypeLabel: '通用技能',
+            commandName: '极限技',
+            commandId: 3,
+          },
+        ],
+      })}
+    />,
+  );
+  fireEvent.click(view.getByRole('button', { name: /共享热键栏/ }));
+  fireEvent.click(view.getByRole('button', { name: /热键栏 6/ }));
+  fireEvent.click(view.getByRole('button', { name: /槽位 6/ }));
+  assert.match(
+    view.getByRole('region', { name: '快捷栏内容' }).textContent ?? '',
+    /极限技/,
+  );
+  assert.match(
+    view.getByRole('region', { name: '快捷栏内容' }).textContent ?? '',
+    /6 \/ 6/,
+  );
+});
+
+test('retainer caches drill through container pages without losing sparse physical slots', async () => {
+  const { api } = bridge([summary('ITEMFDR.DAT')]);
+  api.result.mock.mockImplementation(async () =>
+    detail('ITEMFDR.DAT', {
+      retainers: [
+        {
+          retainerId: '123',
+          itemIds: [0, 0, 1],
+          itemCounts: [0, 0, 5],
+          equippedItemIds: [],
+          crystalQuantities: [],
+        },
+      ],
+      saddleBag: { itemIds: [], itemCounts: [] },
+      premiumSaddleBag: { itemIds: [], itemCounts: [] },
+      glamourDresser: { itemIds: [] },
+      cabinet: { setBitIndices: [] },
+    }),
+  );
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [
+      numberField('finder.ret0.item0', '错误槽位物品', 0),
+      numberField('finder.ret0.item2', '物品', 1),
+      numberField('finder.ret0.count2', '数量', 5),
+    ],
+  }));
+  await start();
+  await openFile('ITEMFDR.DAT');
+  await openRow(/^雇员 1/);
+  await openRow(/^背包/);
+  const row = document.querySelector('.record-link')!;
+  fireEvent.click(row);
+  await edit();
+  assert.equal(ui().queryByLabelText(/错误槽位物品/), null);
+  assert.equal((ui().getByLabelText(/数量/) as HTMLInputElement).value, '5');
+});
+
+test('key bindings are edited as named keys and modifiers rather than hexadecimal text', async () => {
+  const { api } = bridge([summary('KEYBIND.DAT')]);
+  api.result.mock.mockImplementation(async () =>
+    detail('KEYBIND.DAT', {
+      bindings: [
+        {
+          index: 0,
+          command: 'JUMP',
+          keys: [{ keyName: 'A', modifierNames: ['Ctrl'] }, { unbound: true }],
+        },
+      ],
+    }),
+  );
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [textField('keybind.0', '跳跃绑定', '41.02,00.00', '按键绑定')],
+  }));
+  await start();
+  await openFile('KEYBIND.DAT');
+  await openRow(/^移动与镜头/);
+  await openRow(/^跳跃/);
+  await edit();
+  assert.equal(
+    (ui().getByLabelText('第一按键') as HTMLSelectElement).value,
+    '65',
+  );
+  const group = ui().getByRole('group', { name: '第一按键' });
+  assert.equal(
+    (within(group).getByLabelText('Ctrl') as HTMLInputElement).checked,
+    true,
+  );
+  fireEvent.change(ui().getByLabelText('第一按键'), {
+    target: { value: '66' },
+  });
+  assert.match(document.body.textContent ?? '', /42.02,00.00/);
+});
+
+test('empty categories remain reachable and technical diagnostics are not the primary view', async () => {
+  const { api } = bridge([summary('UISAVE.DAT')]);
+  api.result.mock.mockImplementation(async () =>
+    detail('UISAVE.DAT', {
+      segments: [
+        {
+          id: 7,
+          name: 'PVPSET',
+          coverage: {
+            structureComplete: false,
+            knownFields: [],
+            candidateFields: [],
+            unknownFields: [{ field: 'bytes', reason: '未知字段' }],
+          },
+          data: { decodedByteLength: 66 },
+        },
+        { id: 38, name: 'MKDSJOB', data: { empty: true } },
+      ],
+    }),
+  );
+  await start();
+  await openFile('UISAVE.DAT');
+  assert.equal(ui().getAllByRole('button', { name: /辅助职业设置/ }).length, 1);
+  await openRow(/^PvP 设置/);
+  assert.equal(ui().queryByText('未知字段'), null);
+  assert.equal(ui().queryByRole('button', { name: '编辑' }), null);
+  fireEvent.click(ui().getByRole('button', { name: '技术数据' }));
+  await ui().findByText(/bytes/);
+});
+
+test('JSON trees stay lazy, page long arrays and expand long text', () => {
+  const view = render(
+    <JsonTree
+      value={{
+        rows: Array.from({ length: 120 }, (_, i) => i),
+        text: 'x'.repeat(500),
+      }}
+    />,
+  );
+  assert.equal(view.queryByText('119'), null);
+  fireEvent.click(view.getByRole('button', { name: /rows 120 项/ }));
+  assert.match(view.container.textContent ?? '', /继续显示/);
+  fireEvent.click(view.getByRole('button', { name: /继续显示/ }));
+  assert.match(view.container.textContent ?? '', /79/);
+  fireEvent.click(view.getByRole('button', { name: /展开文本/ }));
+  assert.match(view.container.textContent ?? '', new RegExp('x'.repeat(500)));
 });

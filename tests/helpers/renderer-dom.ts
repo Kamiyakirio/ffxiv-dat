@@ -4,6 +4,13 @@ import { JSDOM } from 'jsdom';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'http://localhost',
 });
+dom.window.scrollTo = () => {};
+dom.window.requestAnimationFrame = (callback) =>
+  dom.window.setTimeout(() => callback(Date.now()), 0);
+Object.defineProperty(dom.window.navigator, 'clipboard', {
+  configurable: true,
+  value: { writeText: async () => {} },
+});
 Object.defineProperties(globalThis, {
   window: { value: dom.window, configurable: true },
   document: { value: dom.window.document, configurable: true },

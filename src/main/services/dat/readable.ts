@@ -498,7 +498,7 @@ function inventorySections(data: Row): ReadableSection[] {
           : `名称未收录（条目 ${index}）`,
         stored: '已记录',
       })),
-      '名称通过 Cabinet 条目关联到 Item；这是本地缓存记录，原始位图保留在结构数据中。',
+      '名称通过 Cabinet 条目关联到 Item；这是本地缓存记录，原始位图保留在技术数据中。',
     ),
   );
   return result;
@@ -533,8 +533,8 @@ function structuredSections(
       (data[key] === null || typeof data[key] !== 'object'),
   );
   if (scalarKeys.length)
-    sections.push(
-      table(
+    sections.push({
+      ...table(
         `${prefix}-values`,
         title,
         [
@@ -546,7 +546,8 @@ function structuredSections(
           value: valueText(key, data[key]),
         })),
       ),
-    );
+      sourceKeys: scalarKeys,
+    });
   for (const [key, value] of Object.entries(data)) {
     if (!visibleKey(key)) continue;
     if (!labels[key] && key !== 'chunks' && key !== 'data' && key !== 'objects')
@@ -1088,7 +1089,7 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
             [],
             value.empty
               ? '没有保存的记录。'
-              : '已读取此子段，但业务字段含义仍未确认；完整数值和原始字节可在结构数据中查看。',
+              : '已读取此子段，但业务字段含义仍未确认；完整数值和原始字节可在技术数据中查看。',
           ),
         ];
       return sections.map((section) => ({
@@ -1120,7 +1121,7 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
                 ? '部分解析'
                 : '尚未支持',
         })),
-        '每个内嵌文件也可在左侧“历史备份”中单独查看。',
+        '打开下方的配置文件，可独立查看备份内的对应内容。',
       ),
     ];
   if (detail.header.format === 'config-copy')
@@ -1165,58 +1166,79 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
       bustSize: '胸围滑杆',
     };
     return [
-      table(
-        'appearance',
-        '外观预设',
-        [
-          ['field', '项目'],
-          ['value', '内容'],
+      {
+        ...table(
+          'appearance',
+          '外观预设',
+          [
+            ['field', '项目'],
+            ['value', '内容'],
+          ],
+          [
+            {
+              field: '种族',
+              value: races[number(customize.race)] ?? `种族 ${customize.race}`,
+            },
+            {
+              field: '性别',
+              value:
+                customize.sex === 0
+                  ? '男'
+                  : customize.sex === 1
+                    ? '女'
+                    : '未记录',
+            },
+            ...Object.entries(appearanceLabels).map(([key, label]) => ({
+              field: label,
+              value: customize[key],
+            })),
+            {
+              field: '部族',
+              value:
+                gameName('Tribe', number(customize.tribe)) ?? customize.tribe,
+            },
+            { field: '体型编号', value: customize.bodyType },
+            { field: '挑染', value: customize.highlights },
+            ...list(customize.facialFeaturesEnabled).map((value, index) => ({
+              field: `面部特征 ${index + 1}`,
+              value,
+            })),
+            { field: '旧版纹身', value: customize.legacyTattoo },
+            { field: '眼型', value: customize.eyeShape },
+            { field: '小虹膜', value: customize.smallIris },
+            { field: '嘴型', value: customize.mouth },
+            { field: '口红', value: customize.lipstick },
+            { field: '面纹', value: customize.facePaint },
+            { field: '反转面纹', value: customize.facePaintReversed },
+            { field: '声线', value: data.voice },
+            { field: '备注', value: data.comment || '未填写' },
+            {
+              field: '完整性校验',
+              value: data.checksumMatches ? '通过' : '未通过',
+            },
+          ],
+          '颜色和外观样式保留游戏选项编号；预设中没有实际 RGB 颜色或预览图片。',
+        ),
+        sourceKeys: [
+          'customize.race',
+          'customize.sex',
+          ...Object.keys(appearanceLabels).map((key) => `customize.${key}`),
+          'customize.tribe',
+          'customize.bodyType',
+          'customize.highlights',
+          ...Array.from({ length: 7 }, () => 'customize.facialFeatures'),
+          'customize.facialFeatures',
+          'customize.eyeShapeFlags',
+          'customize.eyeShapeFlags',
+          'customize.mouthFlags',
+          'customize.mouthFlags',
+          'customize.facePaintFlags',
+          'customize.facePaintFlags',
+          'voice',
+          'comment',
+          'checksumMatches',
         ],
-        [
-          {
-            field: '种族',
-            value: races[number(customize.race)] ?? `种族 ${customize.race}`,
-          },
-          {
-            field: '性别',
-            value:
-              customize.sex === 0
-                ? '男'
-                : customize.sex === 1
-                  ? '女'
-                  : '未记录',
-          },
-          ...Object.entries(appearanceLabels).map(([key, label]) => ({
-            field: label,
-            value: customize[key],
-          })),
-          {
-            field: '部族',
-            value:
-              gameName('Tribe', number(customize.tribe)) ?? customize.tribe,
-          },
-          { field: '体型编号', value: customize.bodyType },
-          { field: '挑染', value: customize.highlights },
-          ...list(customize.facialFeaturesEnabled).map((value, index) => ({
-            field: `面部特征 ${index + 1}`,
-            value,
-          })),
-          { field: '旧版纹身', value: customize.legacyTattoo },
-          { field: '眼型', value: customize.eyeShape },
-          { field: '小虹膜', value: customize.smallIris },
-          { field: '嘴型', value: customize.mouth },
-          { field: '口红', value: customize.lipstick },
-          { field: '面纹', value: customize.facePaint },
-          { field: '反转面纹', value: customize.facePaintReversed },
-          { field: '声线', value: data.voice },
-          { field: '备注', value: data.comment || '未填写' },
-          {
-            field: '完整性校验',
-            value: data.checksumMatches ? '通过' : '未通过',
-          },
-        ],
-        '颜色和外观样式保留游戏选项编号；预设中没有实际 RGB 颜色或预览图片。',
-      ),
+      },
     ];
   }
   return structuredSections(data, 'content', '保存的内容');

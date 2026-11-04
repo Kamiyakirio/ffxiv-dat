@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import KeybindingInput from './KeybindingInput';
 import type {
   DatEditModel,
   DatSaveResult,
@@ -125,15 +126,21 @@ export default function DatEditor({
   onCancel,
   onDirty,
   onSaving,
+  contextLabel,
+  showContextHeading = true,
 }: {
   model: DatEditModel;
   onSaved: (result: DatSaveResult) => void;
   onCancel: () => void;
   onDirty: (dirty: boolean) => void;
   onSaving: (saving: boolean) => void;
+  contextLabel?: string;
+  showContextHeading?: boolean;
 }) {
   const [drafts, setDrafts] = useState<Record<string, EditValue>>({});
-  const [group, setGroup] = useState(model.fields[0]?.group ?? '');
+  const [group, setGroup] = useState(
+    contextLabel ? '' : (model.fields[0]?.group ?? ''),
+  );
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -142,9 +149,15 @@ export default function DatEditor({
     () => [...new Set(model.fields.map((f) => f.group))],
     [model],
   );
+  const compact = !!contextLabel && model.fields.length <= 40;
+  const orderedFields = compact
+    ? [...model.fields].sort(
+        (a, b) => groups.indexOf(a.group) - groups.indexOf(b.group),
+      )
+    : model.fields;
   const changes = model.fields.filter((f) => f.id in drafts);
   const invalidFields = changes.filter((f) => invalid(f, drafts[f.id]));
-  const filtered = model.fields.filter(
+  const filtered = orderedFields.filter(
     (f) =>
       (!group || f.group === group) &&
       `${f.group} ${f.label} ${f.displayValue ?? ''} ${f.value}`
@@ -200,56 +213,70 @@ export default function DatEditor({
   }
   return (
     <section className="dat-editor" aria-label="DAT 编辑器" aria-busy={saving}>
+      {contextLabel && showContextHeading && <h3>正在编辑：{contextLabel}</h3>}
       <div className="editor-notes">
-        {model.notes.map((note) => (
-          <p key={note}>{note}</p>
-        ))}
+        <p>保存前请退出游戏。保存时会自动备份，并检查文件是否被外部修改。</p>
+        {model.notes
+          .filter((note) => !note.startsWith('仅开放已确认的存储字段'))
+          .map((note) => (
+            <p key={note}>{note}</p>
+          ))}
       </div>
       {!model.fields.length ? (
-        <p>此文件没有可可靠写回的字段。</p>
+        <p>
+          {contextLabel
+            ? '当前项目没有已验证的可编辑字段。'
+            : '此文件没有已验证的可编辑字段。'}
+        </p>
       ) : (
         <>
-          <div className="editor-controls">
-            <label className="field-label">
-              编辑类别
-              <select
-                aria-label="编辑类别"
-                value={group}
-                disabled={saving}
-                onChange={(event) => {
-                  setGroup(event.currentTarget.value);
-                  setPage(0);
-                }}
-              >
-                <option value="">全部类别</option>
-                {groups.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              搜索字段
-              <input
-                aria-label="搜索可编辑字段"
-                value={query}
-                disabled={saving}
-                placeholder="名称、编号或当前内容"
-                onChange={(event) => {
-                  setQuery(event.currentTarget.value);
-                  setGroup('');
-                  setPage(0);
-                }}
-              />
-            </label>
-          </div>
-          <p className="muted">
-            {model.fields.length.toLocaleString()} 个可编辑字段 · 当前匹配{' '}
-            {filtered.length.toLocaleString()} 个
-          </p>
+          {!compact && (
+            <div className="editor-controls">
+              {groups.length > 1 && (
+                <label className="field-label">
+                  编辑类别
+                  <select
+                    aria-label="编辑类别"
+                    value={group}
+                    disabled={saving}
+                    onChange={(event) => {
+                      setGroup(event.currentTarget.value);
+                      setPage(0);
+                    }}
+                  >
+                    <option value="">全部类别</option>
+                    {groups.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="field-label">
+                搜索字段
+                <input
+                  aria-label="搜索可编辑字段"
+                  value={query}
+                  disabled={saving}
+                  placeholder="名称、编号或当前内容"
+                  onChange={(event) => {
+                    setQuery(event.currentTarget.value);
+                    setGroup('');
+                    setPage(0);
+                  }}
+                />
+              </label>
+            </div>
+          )}
+          {!compact && (
+            <p className="muted">
+              {model.fields.length.toLocaleString()} 个可编辑字段 · 当前匹配{' '}
+              {filtered.length.toLocaleString()} 个
+            </p>
+          )}
           <div className="editor-fields">
-            {visible.map((storedField) => {
+            {visible.map((storedField, fieldIndex) => {
               const referenceType = storedField.referenceType;
               const field = {
                 ...storedField,
@@ -268,99 +295,114 @@ export default function DatEditor({
                 issue = invalid(field, value),
                 changed = field.id in drafts;
               return (
-                <div
-                  className={`editor-field${changed ? ' changed' : ''}`}
-                  key={field.id}
-                >
-                  <label htmlFor={`edit-${field.id}`}>
-                    <strong>{field.label}</strong>
-                    <small>{field.group}</small>
-                  </label>
-                  <div>
-                    {field.type === 'boolean' ? (
-                      <input
-                        id={`edit-${field.id}`}
-                        type="checkbox"
-                        checked={!!value}
-                        disabled={saving}
-                        onChange={(event) =>
-                          change(field, event.currentTarget.checked)
-                        }
-                      />
-                    ) : field.choices ? (
-                      <select
-                        id={`edit-${field.id}`}
-                        value={String(value)}
-                        disabled={saving}
-                        onChange={(event) =>
-                          change(field, event.currentTarget.value)
-                        }
-                      >
-                        {!field.choices.some(
-                          (c) => c.value === Number(value),
-                        ) && (
-                          <option value={String(value)}>
-                            原值 {String(value)}
-                          </option>
-                        )}
-                        {field.choices.map((choice) => (
-                          <option key={choice.value} value={choice.value}>
-                            {choice.label} · {choice.value}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        id={`edit-${field.id}`}
-                        type={field.type === 'number' ? 'number' : 'text'}
-                        step={field.step ?? 'any'}
-                        min={field.min}
-                        max={field.max}
-                        value={String(value)}
-                        disabled={saving}
-                        aria-invalid={!!issue}
-                        onChange={(event) =>
-                          change(field, event.currentTarget.value)
-                        }
-                      />
+                <Fragment key={field.id}>
+                  {compact &&
+                    groups.length > 1 &&
+                    (fieldIndex === 0 ||
+                      visible[fieldIndex - 1].group !== field.group) && (
+                      <h3 className="editor-group-heading">{field.group}</h3>
                     )}
-                    {field.displayValue && (
-                      <small className="muted">
-                        原值：{field.displayValue}
-                      </small>
-                    )}
-                    {field.reference && (
-                      <ReferencePicker
-                        field={field}
-                        disabled={saving}
-                        onChange={(value) => change(field, value)}
-                      />
-                    )}
-                    {field.type === 'text' && (
-                      <small className="muted">
-                        {new TextEncoder().encode(String(value)).length} /{' '}
-                        {field.maxBytes} 字节
-                      </small>
-                    )}
-                    {issue && (
-                      <small className="editor-error" role="alert">
-                        {issue}
-                      </small>
-                    )}
-                    {changed && (
-                      <small className="muted">
-                        修改前：{valueLabel(field.value)}{' '}
-                        <button
-                          className="text-button"
+                  <div
+                    className={`editor-field${changed ? ' changed' : ''}`}
+                    key={field.id}
+                  >
+                    <label htmlFor={`edit-${field.id}`}>
+                      <strong>{field.label}</strong>
+                      {!contextLabel && <small>{field.group}</small>}
+                    </label>
+                    <div>
+                      {field.id.startsWith('keybind.') ? (
+                        <KeybindingInput
+                          id={`edit-${field.id}`}
+                          value={value}
                           disabled={saving}
-                          onClick={() => change(field, field.value)}
+                          onChange={(value) => change(field, value)}
+                        />
+                      ) : field.type === 'boolean' ? (
+                        <input
+                          id={`edit-${field.id}`}
+                          type="checkbox"
+                          checked={!!value}
+                          disabled={saving}
+                          onChange={(event) =>
+                            change(field, event.currentTarget.checked)
+                          }
+                        />
+                      ) : field.choices ? (
+                        <select
+                          id={`edit-${field.id}`}
+                          value={String(value)}
+                          disabled={saving}
+                          onChange={(event) =>
+                            change(field, event.currentTarget.value)
+                          }
                         >
-                          还原此项
-                        </button>
-                      </small>
-                    )}
+                          {!field.choices.some(
+                            (c) => c.value === Number(value),
+                          ) && (
+                            <option value={String(value)}>
+                              原值 {String(value)}
+                            </option>
+                          )}
+                          {field.choices.map((choice) => (
+                            <option key={choice.value} value={choice.value}>
+                              {choice.label} · {choice.value}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`edit-${field.id}`}
+                          type={field.type === 'number' ? 'number' : 'text'}
+                          step={field.step ?? 'any'}
+                          min={field.min}
+                          max={field.max}
+                          value={String(value)}
+                          disabled={saving}
+                          aria-invalid={!!issue}
+                          onChange={(event) =>
+                            change(field, event.currentTarget.value)
+                          }
+                        />
+                      )}
+                      {field.displayValue && (
+                        <small className="muted">
+                          原值：{field.displayValue}
+                        </small>
+                      )}
+                      {field.reference && (
+                        <ReferencePicker
+                          field={field}
+                          disabled={saving}
+                          onChange={(value) => change(field, value)}
+                        />
+                      )}
+                      {field.type === 'text' && (
+                        <small className="muted">
+                          {new TextEncoder().encode(String(value)).length} /{' '}
+                          {field.maxBytes} 字节
+                        </small>
+                      )}
+                      {issue && (
+                        <small className="editor-error" role="alert">
+                          {issue}
+                        </small>
+                      )}
+                      {changed && (
+                        <small className="muted">
+                          修改前：{valueLabel(field.value)}{' '}
+                          <button
+                            className="text-button"
+                            disabled={saving}
+                            onClick={() => change(field, field.value)}
+                          >
+                            还原此项
+                          </button>
+                        </small>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </Fragment>
               );
             })}
           </div>

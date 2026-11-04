@@ -56,6 +56,7 @@ export interface ReadableSection {
   id: string;
   title: string;
   sourceId?: string;
+  sourceKeys?: string[];
   note?: string;
   columns: { key: string; label: string }[];
   rows: Record<string, string | number | null>[];
@@ -69,6 +70,11 @@ export interface DecodeReport {
 }
 
 export type EditValue = string | number | boolean;
+export interface EditTarget {
+  label: string;
+  prefixes?: string[];
+  ids?: string[];
+}
 export interface EditableField {
   id: string;
   group: string;
