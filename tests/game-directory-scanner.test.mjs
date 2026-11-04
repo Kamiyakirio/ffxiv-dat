@@ -19,7 +19,7 @@ test('finds the exact three-folder structure on a later disk', async (t) => {
   const target = path.join(
     secondDisk,
     'nested',
-    'game',
+    'Games',
     'My Games',
     folderName,
   );
@@ -33,8 +33,9 @@ test('does not match missing, partial or noncontiguous My Games folders', async 
   for (const directories of [
     ['Games', folderName],
     ['My Games backup', folderName],
-    ['game', 'My Games', 'extra', folderName],
-    ['game', 'My Games', `${folderName} backup`],
+    ['game', 'My Games', folderName],
+    ['Games', 'My Games', 'extra', folderName],
+    ['Games', 'My Games', `${folderName} backup`],
   ]) {
     await mkdir(path.join(root, ...directories), { recursive: true });
   }
@@ -42,17 +43,17 @@ test('does not match missing, partial or noncontiguous My Games folders', async 
   assert.equal(await findGameDirectory([root]), null);
 });
 
-test('finds Downloads/My Games without requiring a game parent directory', async (t) => {
+test('does not match Downloads/My Games without the required Games parent', async (t) => {
   const root = await fixture(t);
   const target = path.join(root, 'Downloads', 'My Games', folderName);
   await mkdir(target, { recursive: true });
-  assert.equal(await findGameDirectory([root]), target);
-  assert.equal(await findGameDirectory([target]), target);
+  assert.equal(await findGameDirectory([root]), null);
+  assert.equal(await findGameDirectory([target]), null);
 });
 
 test('matches Windows folder names regardless of case', async (t) => {
   const root = await fixture(t);
-  const target = path.join(root, 'GAME', 'my games', folderName.toLowerCase());
+  const target = path.join(root, 'GAMES', 'my games', folderName.toLowerCase());
   await mkdir(target, { recursive: true });
 
   assert.equal(await findGameDirectory([root]), target);
@@ -60,7 +61,7 @@ test('matches Windows folder names regardless of case', async (t) => {
 
 test('ignores matching file names and unavailable disks', async (t) => {
   const root = await fixture(t);
-  const parent = path.join(root, 'game', 'My Games');
+  const parent = path.join(root, 'Games', 'My Games');
   await mkdir(parent, { recursive: true });
   await writeFile(path.join(parent, folderName), 'not a directory');
 
@@ -74,7 +75,7 @@ test('does not follow directory links or junction loops', async (t) => {
   const root = await fixture(t);
   const outside = await fixture(t);
   await mkdir(path.join(outside, 'My Games', folderName), { recursive: true });
-  await symlink(outside, path.join(root, 'game'), 'junction');
+  await symlink(outside, path.join(root, 'Games'), 'junction');
   await symlink(root, path.join(root, 'loop'), 'junction');
 
   assert.equal(await findGameDirectory([root]), null);
