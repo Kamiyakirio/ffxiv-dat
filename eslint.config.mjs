@@ -1,48 +1,30 @@
 import js from '@eslint/js';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import prettier from 'eslint-config-prettier/flat';
-import svelte from 'eslint-plugin-svelte';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.mjs';
 
 export default defineConfig(
   globalIgnores(['.vite/**', 'out/**', 'dist/**', 'coverage/**']),
   js.configs.recommended,
   ts.configs.recommended,
-  svelte.configs.recommended,
-  {
-    languageOptions: {
-      parserOptions: {
-        extraFileExtensions: ['.svelte'],
-      },
-    },
-  },
+  reactHooks.configs.flat.recommended,
   {
     files: [
       '*.{js,mjs,cjs,ts,mts,cts}',
       'src/{main,preload}/**/*.ts',
-      'tests/**/*.mjs',
+      'tests/**/*.{mjs,ts,tsx}',
     ],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ['src/renderer/**/*.{ts,svelte}'],
+    files: ['src/renderer/**/*.{ts,tsx}'],
     languageOptions: {
       globals: globals.browser,
     },
   },
-  {
-    files: ['**/*.svelte', '**/*.svelte.{js,ts}'],
-    languageOptions: {
-      parserOptions: {
-        parser: ts.parser,
-        svelteConfig,
-      },
-    },
-  },
   prettier,
-  svelte.configs.prettier,
 );

@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "preserve",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "allowJs": true,
@@ -14,5 +15,5 @@
     "sourceMap": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "*.ts", "*.mts"]
+  "include": ["src/**/*", "tests/**/*.tsx", "*.ts", "*.mts"]
 }
