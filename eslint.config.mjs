@@ -21,7 +21,7 @@ export default defineConfig(
   {
     files: [
       '*.{js,mjs,cjs,ts,mts,cts}',
-      'src/{main,preload,game-directory-scanner}.ts',
+      'src/{main,preload}/**/*.ts',
       'tests/**/*.mjs',
     ],
     languageOptions: {
@@ -29,7 +29,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['src/renderer.ts', 'src/**/*.svelte', 'src/**/*.svelte.{js,ts}'],
+    files: ['src/renderer/**/*.{ts,svelte}'],
     languageOptions: {
       globals: globals.browser,
     },

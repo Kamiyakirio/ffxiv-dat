@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { findGameDirectory } from '../src/game-directory-scanner.ts';
+import { findGameDirectory } from '../src/main/services/game-directory-scanner.ts';
 
 const folderName = 'FINAL FANTASY XIV - A Realm Reborn';
 

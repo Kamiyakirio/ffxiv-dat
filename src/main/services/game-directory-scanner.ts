@@ -9,7 +9,7 @@ const targetFolders = [
 const concurrency = 16;
 
 function getDiskRoots(): string[] {
-  if (process.platform !== 'win32') return ['/'];
+  if (process.platform !== 'win32') return ['~'];
 
   return Array.from(
     { length: 26 },

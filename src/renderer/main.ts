@@ -14,7 +14,7 @@
 
 import { mount } from 'svelte';
 import App from './App.svelte';
-import './index.css';
+import './styles/index.css';
 
 const target = document.getElementById('app');
 

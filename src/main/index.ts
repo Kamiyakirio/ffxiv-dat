@@ -1,10 +1,9 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-import { findGameDirectory } from './game-directory-scanner';
+import { registerGameDirectoryIpc } from './ipc/game-directory';
 
 const scanController = new AbortController();
-let activeScan: Promise<string | null> | undefined;
 
 app.on('before-quit', () => scanController.abort());
 
@@ -40,15 +39,7 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  ipcMain.handle('game-directory:scan', () => {
-    activeScan ??= findGameDirectory(undefined, scanController.signal).finally(
-      () => {
-        activeScan = undefined;
-      },
-    );
-
-    return activeScan;
-  });
+  registerGameDirectoryIpc(scanController.signal);
 
   createWindow();
 
