@@ -882,3 +882,128 @@ td {
 .macro-record[open] > summary svg {
   transform: rotate(90deg);
 }
+
+.dat-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.editor-notes {
+  border-left: 3px solid #bfa375;
+  padding: 4px 14px;
+  background: #bfa3750d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.editor-notes p {
+  margin: 6px 0;
+}
+.editor-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.editor-fields {
+  border-top: 1px solid var(--line);
+}
+.editor-field {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 16px;
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.editor-field.changed {
+  background: #bfa3750d;
+  border-left: 3px solid #bfa375;
+}
+.editor-field label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+.editor-field label small {
+  opacity: 0.6;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.editor-field > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.editor-field input:not([type='checkbox']),
+.editor-field select {
+  width: 100%;
+}
+.editor-field input[type='checkbox'] {
+  align-self: flex-start;
+}
+.editor-field small {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.editor-error {
+  color: #ae3c32;
+}
+.editor-actions,
+.editor-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.editor-actions {
+  position: sticky;
+  bottom: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+}
+.editor-actions > span {
+  font-size: 12px;
+}
+.editor-review {
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.editor-review ul {
+  max-height: 260px;
+  overflow: auto;
+}
+.save-success {
+  padding: 14px;
+  border: 1px solid #5e9877;
+  border-radius: 8px;
+  color: #326c4a;
+  font-size: 12px;
+}
+@media (max-width: 800px) {
+  .editor-controls,
+  .editor-field {
+    grid-template-columns: 1fr;
+  }
+  .editor-actions {
+    flex-wrap: wrap;
+  }
+}
+
+.reference-picker {
+  font-size: 12px;
+}
+.reference-options {
+  display: flex;
+  flex-direction: column;
+  max-height: 180px;
+  overflow: auto;
+  gap: 4px;
+  margin-top: 6px;
+}
+.reference-options button {
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 12px;
+}

@@ -2,13 +2,15 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { findGameDirectories } from '../services/game-directory-scanner';
 import { DatWorkspace } from '../services/dat-workspace';
-import type { GameDirectory } from '../../shared/types';
+import { searchGameNames } from '../services/dat/game-data';
+import type { GameDirectory, DatEditRequest } from '../../shared/types';
 
 export function registerGameDirectoryIpc(signal: AbortSignal): void {
   const workspace = new DatWorkspace();
   let activeScan: Promise<GameDirectory[]> | undefined;
   let decoding: AbortController | null = null;
   let scanning: AbortController | null = null;
+  let saving = false;
   signal.addEventListener(
     'abort',
     () => {
@@ -75,7 +77,8 @@ export function registerGameDirectoryIpc(signal: AbortSignal): void {
   );
   ipcMain.handle('game-directory:decode', async (event, directory: unknown) => {
     if (typeof directory !== 'string') throw new Error('请选择游戏配置目录。');
-    if (decoding) throw new Error('正在解码，请等待当前任务完成。');
+    if (decoding || saving)
+      throw new Error('正在解码或保存，请等待当前任务完成。');
     decoding = new AbortController();
     if (signal.aborted) decoding.abort();
     try {
@@ -95,4 +98,31 @@ export function registerGameDirectoryIpc(signal: AbortSignal): void {
     if (typeof id !== 'string') throw new Error('请选择一个文件。');
     return workspace.getResult(id);
   });
+  ipcMain.handle(
+    'game-directory:names',
+    (_event, sheet: string, query: string) => searchGameNames(sheet, query),
+  );
+  ipcMain.handle('game-directory:edit', (_event, id: unknown) => {
+    if (typeof id !== 'string') throw new Error('请选择一个文件。');
+    if (decoding || saving) throw new Error('请等待当前任务完成。');
+    return workspace.edit(id);
+  });
+  ipcMain.handle(
+    'game-directory:save',
+    async (_event, request: DatEditRequest) => {
+      if (
+        !request ||
+        typeof request.id !== 'string' ||
+        typeof request.sha256 !== 'string'
+      )
+        throw new Error('无效的保存请求。');
+      if (decoding || saving) throw new Error('请等待当前任务完成。');
+      saving = true;
+      try {
+        return await workspace.save(request);
+      } finally {
+        saving = false;
+      }
+    },
+  );
 }

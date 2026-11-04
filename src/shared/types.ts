@@ -68,6 +68,39 @@ export interface DecodeReport {
   cancelled: boolean;
 }
 
+export type EditValue = string | number | boolean;
+export interface EditableField {
+  id: string;
+  group: string;
+  label: string;
+  type: 'text' | 'number' | 'boolean';
+  value: EditValue;
+  min?: number;
+  max?: number;
+  step?: number;
+  maxBytes?: number;
+  reference?: string;
+  referenceType?: { fieldId: string; sheets: Record<string, string> };
+  displayValue?: string;
+  choices?: { value: number; label: string }[];
+}
+export interface DatEditModel {
+  id: string;
+  sha256: string;
+  fields: EditableField[];
+  notes: string[];
+}
+export interface DatEditRequest {
+  id: string;
+  sha256: string;
+  changes: { id: string; value: EditValue }[];
+}
+export interface DatSaveResult {
+  report: DecodeReport;
+  selectedId: string;
+  backupPath: string;
+}
+
 export interface GameDirectoryApi {
   scan: () => Promise<GameDirectory[]>;
   choose: () => Promise<GameDirectory | null>;
@@ -75,5 +108,11 @@ export interface GameDirectoryApi {
   decode: (directory: string) => Promise<DecodeReport>;
   cancel: () => Promise<void>;
   result: (id: string) => Promise<DecodedFileDetail>;
+  edit: (id: string) => Promise<DatEditModel>;
+  names: (
+    sheet: string,
+    query: string,
+  ) => Promise<{ value: number; label: string }[]>;
+  save: (request: DatEditRequest) => Promise<DatSaveResult>;
   onProgress: (callback: (progress: DecodeProgress) => void) => () => void;
 }

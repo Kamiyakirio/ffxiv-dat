@@ -92,6 +92,11 @@ function bridge(files = [summary('COMMON.DAT'), summary('KEYBIND.DAT')]) {
     }),
     result: async (id) =>
       detail(id, { entries: [{ name: 'BattleEffectSelf', value: 1 }] }),
+    edit: async (id) => ({ id, sha256: 'abc123', fields: [], notes: [] }),
+    names: async () => [],
+    save: async () => {
+      throw new Error('No save fixture');
+    },
     onProgress: (callback) => {
       progressListener = callback;
       return unsubscribe;
@@ -104,6 +109,9 @@ function bridge(files = [summary('COMMON.DAT'), summary('KEYBIND.DAT')]) {
     cancel: mock.fn(defaults.cancel),
     decode: mock.fn(defaults.decode),
     result: mock.fn(defaults.result),
+    edit: mock.fn(defaults.edit),
+    names: mock.fn(defaults.names),
+    save: mock.fn(defaults.save),
     onProgress: mock.fn(defaults.onProgress),
   };
   window.gameDirectory = api;
@@ -561,4 +569,190 @@ test('coverage distinguishes resolved fields from specific unknown fields instea
   view.getByRole('cell', { name: '四边形' });
   view.getByRole('cell', { name: '绅士风度' });
   assert.equal(view.queryByText('含未确认字段'), null);
+});
+
+test('editing a file previews changes, saves with its hash and refreshes the selected result', async () => {
+  const { api } = bridge([summary('COMMON.DAT')]);
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: ['保存前请退出游戏'],
+    fields: [
+      {
+        id: 'config.0',
+        group: '配置项',
+        label: '测试设置',
+        type: 'text',
+        value: '1',
+        maxBytes: 20,
+      },
+    ],
+  }));
+  api.save.mock.mockImplementation(async () => ({
+    report: {
+      files: [summary('COMMON.DAT', { id: 'saved' })],
+      processed: 1,
+      total: 1,
+      cancelled: false,
+    },
+    selectedId: 'saved',
+    backupPath: '/game/COMMON.DAT.backup-test',
+  }));
+  render(<App />);
+  await waitFor(() =>
+    assert.equal(
+      within(document.body)
+        .getByRole('button', { name: '开始解码' })
+        .hasAttribute('disabled'),
+      false,
+    ),
+  );
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: '开始解码' }),
+  );
+  fireEvent.click(
+    await within(document.body).findByRole('button', { name: '编辑' }),
+  );
+  const input = await within(document.body).findByLabelText(/测试设置/);
+  fireEvent.change(input, { target: { value: '200' } });
+  assert.match(document.body.textContent ?? '', /1 项未保存修改/);
+  assert.match(document.body.textContent ?? '', /1 → 200/);
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: '保存并备份' }),
+  );
+  await within(document.body).findByText(/保存成功。原文件备份/);
+  assert.deepEqual(api.save.mock.calls[0].arguments, [
+    {
+      id: 'COMMON.DAT',
+      sha256: 'abc123',
+      changes: [{ id: 'config.0', value: '200' }],
+    },
+  ]);
+  assert.equal(api.result.mock.calls.at(-1)?.arguments[0], 'saved');
+  assert.equal(
+    within(document.body).queryByRole('region', { name: 'DAT 编辑器' }),
+    null,
+  );
+});
+
+test('editor rejects invalid byte lengths, retains drafts on save failure and guards unsaved navigation', async () => {
+  const { api } = bridge();
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [
+      {
+        id: 'config.0',
+        group: '配置项',
+        label: '测试设置',
+        type: 'text',
+        value: '1',
+        maxBytes: 4,
+      },
+    ],
+  }));
+  api.save.mock.mockImplementation(async () => {
+    throw new Error('文件已被游戏修改');
+  });
+  const confirm = mock.method(window, 'confirm', () => false);
+  render(<App />);
+  await waitFor(() =>
+    assert.equal(
+      within(document.body)
+        .getByRole('button', { name: '开始解码' })
+        .hasAttribute('disabled'),
+      false,
+    ),
+  );
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: '开始解码' }),
+  );
+  fireEvent.click(
+    await within(document.body).findByRole('button', { name: '编辑' }),
+  );
+  const input = await within(document.body).findByLabelText(/测试设置/);
+  fireEvent.change(input, { target: { value: '中文' } });
+  assert.equal(
+    within(document.body)
+      .getByRole('button', { name: '保存并备份' })
+      .hasAttribute('disabled'),
+    true,
+  );
+  fireEvent.change(input, { target: { value: '2' } });
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: '保存并备份' }),
+  );
+  await within(document.body).findByText('文件已被游戏修改');
+  assert.equal((input as HTMLInputElement).value, '2');
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: /KEYBIND.DAT/ }),
+  );
+  assert.equal(confirm.mock.callCount(), 1);
+  assert.equal((input as HTMLInputElement).value, '2');
+  confirm.mock.mockImplementation(() => true);
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: /KEYBIND.DAT/ }),
+  );
+  await waitFor(() =>
+    assert.equal(within(document.body).queryByLabelText(/测试设置/), null),
+  );
+  assert.equal(api.result.mock.calls.at(-1)?.arguments[0], 'KEYBIND.DAT');
+});
+
+test('editor reference lookup selects named data instead of requiring a raw numeric ID', async () => {
+  const { api } = bridge([summary('GEARSET.DAT')]);
+  api.edit.mock.mockImplementation(async (id) => ({
+    id,
+    sha256: 'abc123',
+    notes: [],
+    fields: [
+      {
+        id: 'item',
+        group: '装备',
+        label: '主手物品',
+        type: 'number',
+        value: 0,
+        min: 0,
+        max: 4294967295,
+        step: 1,
+        reference: 'Item',
+      },
+    ],
+  }));
+  api.names.mock.mockImplementation(async () => [
+    { value: 123, label: '测试武器' },
+  ]);
+  render(<App />);
+  await waitFor(() =>
+    assert.equal(
+      within(document.body)
+        .getByRole('button', { name: '开始解码' })
+        .hasAttribute('disabled'),
+      false,
+    ),
+  );
+  fireEvent.click(
+    within(document.body).getByRole('button', { name: '开始解码' }),
+  );
+  fireEvent.click(
+    await within(document.body).findByRole('button', { name: '编辑' }),
+  );
+  fireEvent.click(
+    await within(document.body).findByRole('button', { name: '按名称查找' }),
+  );
+  fireEvent.change(within(document.body).getByLabelText('主手物品名称查找'), {
+    target: { value: '武器' },
+  });
+  fireEvent.click(
+    await within(document.body).findByRole('button', {
+      name: '测试武器 · 123',
+    }),
+  );
+  assert.equal(
+    (within(document.body).getByLabelText(/主手物品装备/) as HTMLInputElement)
+      .value,
+    '123',
+  );
+  assert.deepEqual(api.names.mock.calls[0].arguments, ['Item', '武器']);
 });

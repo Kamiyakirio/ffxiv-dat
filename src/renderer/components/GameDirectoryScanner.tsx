@@ -5,9 +5,12 @@ import type {
   DecodeProgress,
   DecodedFileDetail,
   DecodedFileSummary,
+  DatEditModel,
+  DatSaveResult,
 } from '../../shared/types';
 import DecodedContent from './DecodedContent';
 import DecodeCoverage from './DecodeCoverage';
+import DatEditor from './DatEditor';
 
 const statusNames = {
   decoded: '已解析',
@@ -60,11 +63,37 @@ function filterFiles(
 }
 
 // Keyed by file ID so each selection has its own request and view state.
-function FileViewer({ file }: { file: DecodedFileSummary }) {
+function FileViewer({
+  file,
+  onSaved,
+  onDirty,
+  onSaving,
+  canLeave,
+}: {
+  file: DecodedFileSummary;
+  onSaved: (result: DatSaveResult) => void;
+  onDirty: (dirty: boolean) => void;
+  onSaving: (saving: boolean) => void;
+  canLeave: () => boolean;
+}) {
   const [detail, setDetail] = useState<DecodedFileDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState<DatEditModel | null>(null);
+  const [openingEditor, setOpeningEditor] = useState(false);
+
+  async function edit() {
+    setOpeningEditor(true);
+    setError('');
+    try {
+      setEditing(await window.gameDirectory.edit(file.id));
+    } catch (reason) {
+      setError(message(reason));
+    } finally {
+      setOpeningEditor(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -118,9 +147,18 @@ function FileViewer({ file }: { file: DecodedFileSummary }) {
                   '本地配置记录'}
               </p>
             </div>
-            <button onClick={copyResult}>
-              {copied ? '已复制' : '复制 JSON'}
-            </button>
+            <div className="button-group">
+              {!editing &&
+                !detail.summary.error &&
+                detail.summary.status !== 'unsupported' && (
+                  <button onClick={edit} disabled={openingEditor}>
+                    {openingEditor ? '正在准备…' : '编辑'}
+                  </button>
+                )}
+              <button onClick={copyResult}>
+                {copied ? '已复制' : '复制 JSON'}
+              </button>
+            </div>
           </header>
           <p className="source-path path-value muted">
             {detail.summary.relativePath}
@@ -142,7 +180,22 @@ function FileViewer({ file }: { file: DecodedFileSummary }) {
                   暂不支持此文件版本，可在文件信息中查看版本。
                 </p>
               ) : null}
-              <DecodedContent detail={detail} />
+              {editing ? (
+                <DatEditor
+                  model={editing}
+                  onSaved={onSaved}
+                  onDirty={onDirty}
+                  onSaving={onSaving}
+                  onCancel={() => {
+                    if (canLeave()) {
+                      onDirty(false);
+                      setEditing(null);
+                    }
+                  }}
+                />
+              ) : (
+                <DecodedContent detail={detail} />
+              )}
             </>
           )}
           <details className="technical-details">
@@ -199,9 +252,13 @@ export default function GameDirectoryScanner() {
   const [scope, setScope] = useState('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState('');
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [viewEpoch, setViewEpoch] = useState(0);
   const scanSerial = useRef(0);
   const directory = directories.find((entry) => entry.path === selectedPath);
-  const busy = scanning || choosing || decoding;
+  const busy = scanning || choosing || decoding || saving;
   const visibleFiles = filterFiles(report?.files ?? [], scope, query);
   const selectedFile =
     visibleFiles.find((file) => file.id === selectedId) ?? visibleFiles[0];
@@ -215,6 +272,23 @@ export default function GameDirectoryScanner() {
   function chooseDirectory(path: string) {
     setSelectedPath(path);
     clearResults();
+  }
+
+  function canLeave() {
+    if (saving) return false;
+    if (dirty && !window.confirm('有未保存的修改，确定放弃这些修改吗？'))
+      return false;
+    if (dirty) {
+      setDirty(false);
+      setViewEpoch((value) => value + 1);
+    }
+    return true;
+  }
+  function saved(result: DatSaveResult) {
+    setReport(result.report);
+    setSelectedId(result.selectedId);
+    setDirty(false);
+    setSaveMessage(`保存成功。原文件备份：${result.backupPath}`);
   }
 
   const invalidateScan = useCallback(() => {
@@ -247,6 +321,7 @@ export default function GameDirectoryScanner() {
   }, []);
 
   async function scan() {
+    if (!canLeave()) return;
     setScanning(true);
     setError('');
     clearResults();
@@ -264,6 +339,7 @@ export default function GameDirectoryScanner() {
   }, [loadDirectories, invalidateScan]);
 
   async function choose() {
+    if (!canLeave()) return;
     setChoosing(true);
     setError('');
     try {
@@ -295,6 +371,7 @@ export default function GameDirectoryScanner() {
 
   async function decode() {
     if (!directory) return;
+    if (!canLeave()) return;
     setDecoding(true);
     setCancelling(false);
     setError('');
@@ -331,6 +408,7 @@ export default function GameDirectoryScanner() {
   }
 
   function changeFilters(nextScope: string, nextQuery: string) {
+    if (!canLeave()) return;
     const files = filterFiles(report?.files ?? [], nextScope, nextQuery);
     setScope(nextScope);
     setQuery(nextQuery);
@@ -392,7 +470,7 @@ export default function GameDirectoryScanner() {
                 <select
                   value={selectedPath}
                   onChange={(event) =>
-                    chooseDirectory(event.currentTarget.value)
+                    canLeave() && chooseDirectory(event.currentTarget.value)
                   }
                   disabled={busy}
                 >
@@ -493,6 +571,11 @@ export default function GameDirectoryScanner() {
       </section>
       {report && (
         <section className="results-section" aria-labelledby="results-title">
+          {saveMessage && (
+            <p className="save-success path-value" role="status">
+              {saveMessage}
+            </p>
+          )}
           <div className="section-heading results-heading">
             <div>
               <h2 id="results-title">
@@ -555,7 +638,11 @@ export default function GameDirectoryScanner() {
                     key={file.id}
                     className={`file-item${selectedFile?.id === file.id ? ' selected' : ''}${file.parentId !== null ? ' backup-member' : ''}`}
                     aria-pressed={selectedFile?.id === file.id}
-                    onClick={() => setSelectedId(file.id)}
+                    onClick={() => {
+                      if (file.id !== selectedFile?.id && canLeave())
+                        setSelectedId(file.id);
+                    }}
+                    disabled={saving}
                   >
                     <span className="file-name">{file.name}</span>
                     <span className="file-item-meta">
@@ -576,7 +663,14 @@ export default function GameDirectoryScanner() {
               </div>
             </aside>
             {selectedFile ? (
-              <FileViewer key={selectedFile.id} file={selectedFile} />
+              <FileViewer
+                key={`${selectedFile.id}:${viewEpoch}`}
+                file={selectedFile}
+                onSaved={saved}
+                onDirty={setDirty}
+                onSaving={setSaving}
+                canLeave={canLeave}
+              />
             ) : (
               <div className="file-viewer">
                 <div className="viewer-empty">

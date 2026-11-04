@@ -1,7 +1,15 @@
-import { readdir, readFile, realpath } from 'node:fs/promises';
+import {
+  readdir,
+  readFile,
+  realpath,
+  open,
+  rename,
+  unlink,
+  stat,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { setImmediate } from 'node:timers/promises';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { decodeDat } from './dat/decoder.ts';
 import type { DecodedDat } from './dat/decoder.ts';
 import {
@@ -13,6 +21,7 @@ import {
 } from './dat/game-data.ts';
 import { readableSections } from './dat/readable.ts';
 import { coverageStatus } from './dat/coverage.ts';
+import { createEditPlan } from './dat/editor.ts';
 import type {
   GameDirectory,
   CharacterDirectory,
@@ -20,6 +29,9 @@ import type {
   DecodedFileDetail,
   DecodeProgress,
   DecodeReport,
+  DatEditModel,
+  DatEditRequest,
+  DatSaveResult,
 } from '../../shared/types.ts';
 
 const characterPattern = /^FFXIV_CHR([0-9a-f]{16})$/i;
@@ -44,6 +56,155 @@ async function datFiles(directory: string): Promise<string[]> {
 export class DatWorkspace {
   private directories = new Map<string, GameDirectory>();
   private results = new Map<string, DecodedFileDetail>();
+  private sourceFiles = new Map<string, { file: string; directory: string }>();
+  private saving = false;
+
+  private target(id: string) {
+    const detail = this.getResult(id);
+    const members: string[] = [];
+    let root = detail;
+    while (root.summary.parentId) {
+      members.unshift(root.summary.name);
+      root = this.getResult(root.summary.parentId);
+    }
+    const source = this.sourceFiles.get(root.summary.id);
+    if (!source) throw new Error('文件结果已失效，请重新解码。');
+    return { detail, root, members, ...source };
+  }
+
+  private async currentSource(id: string) {
+    const target = this.target(id);
+    if (
+      (await realpath(target.file)) !== target.file ||
+      (await realpath(target.directory)) !== target.directory
+    )
+      throw new Error('文件位置已改变，请重新选择目录。');
+    const bytes = await readFile(target.file);
+    if (createHash('sha256').update(bytes).digest('hex') !== target.root.sha256)
+      throw new Error('文件已被游戏或其他程序修改，请重新解码后再编辑。');
+    return { ...target, bytes };
+  }
+
+  async edit(id: string): Promise<DatEditModel> {
+    const target = await this.currentSource(id);
+    let decoded = decodeDat(target.bytes, target.file);
+    let bytes = target.bytes;
+    for (const name of target.members) {
+      const member = decoded.members.find((member) => member.name === name);
+      if (!member) throw new Error('备份成员已改变，请重新解码。');
+      bytes = bytes.subarray(member.offset, member.offset + member.length);
+      decoded = member.decoded;
+    }
+    const plan = createEditPlan(bytes, target.detail.summary.name);
+    return {
+      id,
+      sha256: target.detail.sha256,
+      fields: plan.fields,
+      notes: plan.notes,
+    };
+  }
+
+  async save(request: DatEditRequest): Promise<DatSaveResult> {
+    if (this.saving) throw new Error('正在保存，请等待完成。');
+    this.saving = true;
+    let temporary: string | undefined;
+    try {
+      const target = await this.currentSource(request.id);
+      if (request.sha256 !== target.detail.sha256)
+        throw new Error('编辑结果已失效，请重新打开编辑器。');
+      if (!Array.isArray(request.changes) || !request.changes.length)
+        throw new Error('没有需要保存的修改。');
+      const rewrite = (
+        bytes: Buffer,
+        filename: string,
+        members: string[],
+      ): Buffer => {
+        if (!members.length)
+          return createEditPlan(bytes, filename).apply(request.changes);
+        const decoded = decodeDat(bytes, filename);
+        const member = decoded.members.find((m) => m.name === members[0]);
+        if (!member) throw new Error('备份成员不存在。');
+        const updated = rewrite(
+          bytes.subarray(member.offset, member.offset + member.length),
+          member.name,
+          members.slice(1),
+        );
+        const output = Buffer.concat([
+          bytes.subarray(0, member.offset),
+          updated,
+          bytes.subarray(member.offset + member.length),
+        ]);
+        const system = decoded.header.format === 'system-backup';
+        const index = system
+          ? 0
+          : [
+              'COMMON.DAT',
+              'CONTROL0.DAT',
+              'CONTROL1.DAT',
+              'MACRO.DAT',
+              'ADDON.DAT',
+              'UISAVE.DAT',
+              'GEARSET.DAT',
+              'KEYBIND.DAT',
+              'HOTBAR.DAT',
+              'LOGFLTR.DAT',
+              'GS.DAT',
+              'ACQ.DAT',
+              'ITEMFDR.DAT',
+              'ITEMODR.DAT',
+            ].indexOf(member.name);
+        if (index < 0) throw new Error('未验证的备份成员。');
+        output.writeUInt32LE(updated.length, (system ? 40 : 48) + index * 4);
+        output.writeUInt32LE(
+          output.length - Number(decoded.header.headerLength),
+          system ? 36 : 44,
+        );
+        const check = decodeDat(output, filename);
+        if (
+          check.result.data.parseError ||
+          check.members.length !== decoded.members.length
+        )
+          throw new Error('备份容器写回校验失败。');
+        return output;
+      };
+      const updated = rewrite(target.bytes, target.file, target.members);
+      if (updated.equals(target.bytes))
+        throw new Error('修改后的文件与原文件相同，无需保存。');
+      const metadata = await stat(target.file);
+      const backupPath = `${target.file}.backup-${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}`;
+      const backup = await open(backupPath, 'wx', 0o600);
+      try {
+        await backup.writeFile(target.bytes);
+        await backup.sync();
+      } finally {
+        await backup.close();
+      }
+      temporary = `${target.file}.tmp-${randomUUID()}`;
+      const handle = await open(temporary, 'wx', metadata.mode & 0o777);
+      try {
+        await handle.writeFile(updated);
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      // Recheck immediately before replacing the original; never save over an external update.
+      await this.currentSource(request.id);
+      await rename(temporary, target.file);
+      temporary = undefined;
+      const relativePath = target.detail.summary.relativePath;
+      const report = await this.decode(
+        target.directory,
+        new AbortController().signal,
+        () => {},
+      );
+      const selectedId =
+        report.files.find((f) => f.relativePath === relativePath)?.id ?? '';
+      return { report, selectedId, backupPath };
+    } finally {
+      if (temporary) await unlink(temporary).catch(() => {});
+      this.saving = false;
+    }
+  }
 
   async locate(selected: string): Promise<GameDirectory> {
     let directory = await realpath(selected);
@@ -142,6 +303,7 @@ export class DatWorkspace {
       throw new Error('目录位置已改变，请重新选择。');
     const sources = await datFiles(directory);
     this.results.clear();
+    this.sourceFiles.clear();
     const files: DecodedFileSummary[] = [];
     const runId = randomUUID();
     let processed = 0;
@@ -185,6 +347,11 @@ export class DatWorkspace {
         sha256: decoded.sha256,
         coverage: decoded.result.coverage,
       });
+      if (!parentId)
+        this.sourceFiles.set(id, {
+          file: path.join(directory, relativePath),
+          directory,
+        });
       for (const member of decoded.members)
         add(
           member.decoded,

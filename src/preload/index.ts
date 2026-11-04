@@ -8,6 +8,10 @@ const gameDirectory: GameDirectoryApi = {
   decode: (directory) => ipcRenderer.invoke('game-directory:decode', directory),
   cancel: () => ipcRenderer.invoke('game-directory:cancel'),
   result: (id) => ipcRenderer.invoke('game-directory:result', id),
+  edit: (id) => ipcRenderer.invoke('game-directory:edit', id),
+  names: (sheet, query) =>
+    ipcRenderer.invoke('game-directory:names', sheet, query),
+  save: (request) => ipcRenderer.invoke('game-directory:save', request),
   onProgress: (callback) => {
     const listener = (
       _event: Electron.IpcRendererEvent,

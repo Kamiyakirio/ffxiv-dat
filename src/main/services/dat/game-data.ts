@@ -29,6 +29,25 @@ export function gameName(sheet: string, id: number | string): string | null {
   return sheets[sheet]?.[String(id)] || null;
 }
 
+export function searchGameNames(sheet: string, query: string) {
+  if (
+    typeof sheet !== 'string' ||
+    typeof query !== 'string' ||
+    query.length > 100
+  )
+    return [];
+  const search = query.trim().toLowerCase();
+  if (!search) return [];
+  return Object.entries(sheets[sheet] ?? {})
+    .filter(
+      ([id, name]) =>
+        /^\d+$/.test(id) &&
+        (id === search || name.toLowerCase().includes(search)),
+    )
+    .slice(0, 30)
+    .map(([id, label]) => ({ value: Number(id), label }));
+}
+
 function itemIdentity(id: number) {
   const hq = id >= 1000000 && id < 2000000;
   const collectible = id >= 500000 && id < 1000000;
@@ -139,6 +158,26 @@ const directSheets = new Set([
   'Glasses',
   'Recipe',
 ]);
+
+export const hotbarEditChoices = hotbarTypes.map((type, value) => ({
+  value,
+  label: typeLabels[type] ?? type,
+}));
+export const hotbarReferenceSheets: Record<string, string> = Object.fromEntries(
+  hotbarTypes.flatMap((type, value) => {
+    const sheet =
+      type === 'LostFindsItem'
+        ? 'MYCTemporaryItem'
+        : type === 'PvPCombo'
+          ? 'ActionComboRoute'
+          : type === 'PvPQuickChat'
+            ? 'QuickChat'
+            : directSheets.has(type)
+              ? type
+              : null;
+    return sheet ? [[String(value), sheet]] : [];
+  }),
+);
 
 export function describeHotbarCommand(type: string, id: number) {
   const commandTypeLabel = typeLabels[type] ?? `未确认类型（${type}）`;
