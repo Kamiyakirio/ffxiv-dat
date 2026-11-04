@@ -2,24 +2,17 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
-const targetFolders = ['my games', 'final fantasy xiv - a realm reborn'];
+const targetFolders = [
+  'games',
+  'my games',
+  'final fantasy xiv - a realm reborn',
+];
 const concurrency = 16;
 
 function getDiskRoots(): string[] {
   const home = os.homedir();
-  const common = ['Documents', 'Downloads', 'OneDrive/Documents'].map(
-    (folder) =>
-      path.join(home, folder, 'My Games', 'FINAL FANTASY XIV - A Realm Reborn'),
-  );
-  if (process.platform !== 'win32')
-    return [
-      ...common,
-      path.join(home, 'Documents'),
-      path.join(home, 'Downloads'),
-    ];
-
   return [
-    ...common,
+    home,
     ...Array.from(
       { length: 26 },
       (_, index) => `${String.fromCharCode(65 + index)}:\\`,
