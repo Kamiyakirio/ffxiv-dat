@@ -347,6 +347,7 @@ function valueText(key: string, value: unknown): string | number | null {
     aetheryteId: 'Aetheryte',
     contentFinderConditionId: 'ContentFinderCondition',
     petId: 'XBMPet',
+    mycItemId: 'MYCTemporaryItem',
   };
   if (nameSheets[key])
     return `${gameName(nameSheets[key], number(value)) ?? (number(value) === 0 ? '未指定' : '名称未收录')}（${value}）`;
@@ -894,6 +895,175 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
       const id = String(segment.id);
       const name = segmentNames[String(segment.name)] ?? String(segment.name);
       let sections: ReadableSection[];
+      if (segment.id === 34 && Array.isArray(value.wishlist))
+        return [
+          {
+            ...table(
+              'market-wishlist',
+              '市场收藏',
+              [
+                ['slot', '位置'],
+                ['itemId', '收藏物品'],
+              ],
+              rows(value.wishlist).map((entry) => ({
+                ...entry,
+                slot: number(entry.slot) + 1,
+              })),
+              rows(value.wishlist).length ? undefined : '没有保存的市场收藏。',
+            ),
+            sourceId: id,
+          },
+        ];
+      if (segment.id === 20 && Array.isArray(value.sets))
+        return rows(value.sets).map((set, index) => ({
+          ...table(
+            `lost-action-set-${index}`,
+            `失传技能 · ${set.name || `预设 ${index + 1}`}`,
+            [
+              ['index', '位置'],
+              ['mycItemId', '失传技能'],
+              ['quantity', '数量'],
+            ],
+            rows(set.items).map((entry) => ({
+              ...entry,
+              index: number(entry.index) + 1,
+            })),
+            number(set.numItems) === 0 ? '此预设未保存技能。' : undefined,
+          ),
+          sourceId: id,
+        }));
+      if (segment.id === 6 && Array.isArray(value.tiers))
+        return rows(value.tiers).map((tier, index) => ({
+          ...table(
+            `item-menu-tier-${index}`,
+            `物品菜单 · 优先级 ${index + 1}`,
+            [
+              ['index', '顺序'],
+              ['menuEntryId', '菜单项编号'],
+            ],
+            rows(tier.entries).map((entry) => ({
+              ...entry,
+              index: number(entry.index) + 1,
+            })),
+            '菜单项编号与具体菜单文字的对应尚未确认。',
+          ),
+          sourceId: id,
+        }));
+      if (segment.id === 7 && Array.isArray(value.stateEntries))
+        return [
+          {
+            ...table(
+              'pvp-selections',
+              'PvP 保存的选择',
+              [
+                ['classJobName', '职业'],
+                ['selectionRaw', '保存值'],
+                ['selectedIndex', '选择项索引'],
+              ],
+              rows(value.stateEntries).map((entry) => ({
+                ...entry,
+                index: number(entry.index) + 1,
+              })),
+              '零表示未设置；选择项索引从零开始。选项与界面的对应尚未确认，未映射职业槽保留原值。',
+            ),
+            sourceId: id,
+          },
+        ];
+      if (segment.id === 21 && Array.isArray(value.groups))
+        return [
+          {
+            ...table(
+              'stamp-groups',
+              '集体动作贴纸 · 配置组',
+              [
+                ['index', '组'],
+                ['name', '名称'],
+              ],
+              rows(value.groups).map((group) => ({
+                index: number(group.index) + 1,
+                name: group.name,
+              })),
+            ),
+            sourceId: id,
+          },
+          ...rows(value.groups).flatMap((group, index) => {
+            const title = group.name || `配置组 ${index + 1}`;
+            return [
+              {
+                ...table(
+                  `stamp-text-${index}`,
+                  `${title} · 贴纸文字`,
+                  [
+                    ['slot', '文字槽位'],
+                    ['text', '文字'],
+                  ],
+                  rows(group.texts)
+                    .filter((entry) => entry.text)
+                    .map((entry) => ({
+                      ...entry,
+                      slot: number(entry.slot) + 1,
+                    })),
+                ),
+                sourceId: id,
+              },
+              {
+                ...table(
+                  `stamp-order-${index}`,
+                  `${title} · 贴纸顺序`,
+                  [
+                    ['index', '显示顺序'],
+                    ['recordIndex', '记录槽位'],
+                  ],
+                  list(group.order).flatMap((recordIndex, orderIndex) =>
+                    number(recordIndex) === 0xffffffff
+                      ? []
+                      : [{ index: orderIndex + 1, recordIndex }],
+                  ),
+                  '保存的顺序已经读取；记录内各数值的业务含义尚未确认。',
+                ),
+                sourceId: id,
+              },
+            ];
+          }),
+        ];
+      if (segment.id === 13 && Array.isArray(value.groups))
+        return rows(value.groups).map((group, index) => ({
+          ...table(
+            `cwls-group-${index}`,
+            `跨服通讯贝 · 分组 ${index + 1}`,
+            [
+              ['slot', '槽位'],
+              ['linkshellId', '通讯贝 ID'],
+              ['selected', '当前选择'],
+            ],
+            rows(group.slots)
+              .filter((entry) => entry.linkshellId !== '0')
+              .map((entry) => ({
+                ...entry,
+                slot: number(entry.slot) + 1,
+                selected: entry.linkshellId === group.selectedLinkshellId,
+              })),
+            '通讯贝名称未保存在这组槽位数据中。',
+          ),
+          sourceId: id,
+        }));
+      if (segment.id === 42 && Array.isArray(value.groups))
+        return rows(value.groups).map((group, index) => ({
+          ...table(
+            `glasses-slot-${index}`,
+            `眼镜样式 · 装备槽 ${index + 1}`,
+            [
+              ['slot', '列表位置'],
+              ['name', '样式'],
+              ['styleId', '样式编号'],
+            ],
+            rows(group.entries)
+              .filter((entry) => entry.present)
+              .map((entry) => ({ ...entry, slot: number(entry.slot) + 1 })),
+            '列表行为符合未查看样式记录，具体用途仍待运行验证；编号表示样式，不区分颜色变体。',
+          ),
+          sourceId: id,
+        }));
       if (segment.id === 23) {
         const portraits = (
           rows(value.chunks).length

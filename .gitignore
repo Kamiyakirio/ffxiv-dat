@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Electron-Forge
 out/
+
+# Local reverse-engineering evidence
+/docs/reverse-engineering/

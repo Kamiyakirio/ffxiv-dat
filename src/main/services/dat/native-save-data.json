@@ -1,0 +1,351 @@
+{
+  "source": {
+    "executableSha256": "958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9",
+    "indexSha256": "44a296b90d72be4430ffd6d68b87f6b8e19f44c0c4cdfec8118ac25e82691adf",
+    "rootExlSha256": "6e0053c2e171fa931a167368631990cb9b8f3f969049d5637a492d901ee8ae25"
+  },
+  "jobs": {
+    "1": {
+      "classJobId": 19,
+      "name": "骑士"
+    },
+    "2": {
+      "classJobId": 20,
+      "name": "武僧"
+    },
+    "3": {
+      "classJobId": 21,
+      "name": "战士"
+    },
+    "4": {
+      "classJobId": 22,
+      "name": "龙骑士"
+    },
+    "5": {
+      "classJobId": 23,
+      "name": "吟游诗人"
+    },
+    "6": {
+      "classJobId": 24,
+      "name": "白魔法师"
+    },
+    "7": {
+      "classJobId": 25,
+      "name": "黑魔法师"
+    },
+    "8": {
+      "classJobId": 27,
+      "name": "召唤师"
+    },
+    "9": {
+      "classJobId": 28,
+      "name": "学者"
+    },
+    "10": {
+      "classJobId": 30,
+      "name": "忍者"
+    },
+    "11": {
+      "classJobId": 31,
+      "name": "机工士"
+    },
+    "12": {
+      "classJobId": 32,
+      "name": "暗黑骑士"
+    },
+    "13": {
+      "classJobId": 33,
+      "name": "占星术士"
+    },
+    "14": {
+      "classJobId": 34,
+      "name": "武士"
+    },
+    "15": {
+      "classJobId": 35,
+      "name": "赤魔法师"
+    },
+    "16": {
+      "classJobId": 36,
+      "name": "青魔法师"
+    },
+    "17": {
+      "classJobId": 37,
+      "name": "绝枪战士"
+    },
+    "18": {
+      "classJobId": 38,
+      "name": "舞者"
+    },
+    "19": {
+      "classJobId": 39,
+      "name": "钐镰客"
+    },
+    "20": {
+      "classJobId": 40,
+      "name": "贤者"
+    },
+    "21": {
+      "classJobId": 41,
+      "name": "蝰蛇剑士"
+    },
+    "22": {
+      "classJobId": 42,
+      "name": "绘灵法师"
+    },
+    "23": {
+      "classJobId": 43,
+      "name": "驯兽师"
+    }
+  },
+  "glassesStyles": {
+    "0": {
+      "slotIndex": 0,
+      "name": "椭圆眼镜"
+    },
+    "1": {
+      "slotIndex": 0,
+      "name": "金边墨镜"
+    },
+    "2": {
+      "slotIndex": 0,
+      "name": "经典眼镜"
+    },
+    "3": {
+      "slotIndex": 0,
+      "name": "玫瑰色眼镜"
+    },
+    "4": {
+      "slotIndex": 0,
+      "name": "基础款眼镜"
+    },
+    "5": {
+      "slotIndex": 0,
+      "name": "单眼镜"
+    },
+    "6": {
+      "slotIndex": 0,
+      "name": "现代鼻眼镜"
+    },
+    "7": {
+      "slotIndex": 0,
+      "name": "无框眼镜"
+    },
+    "8": {
+      "slotIndex": 0,
+      "name": "粗框眼镜"
+    },
+    "9": {
+      "slotIndex": 0,
+      "name": "艺术眼镜"
+    },
+    "10": {
+      "slotIndex": 0,
+      "name": "鼻眼镜"
+    },
+    "11": {
+      "slotIndex": 0,
+      "name": "作业眼镜"
+    },
+    "12": {
+      "slotIndex": 0,
+      "name": "黄铜护目镜"
+    },
+    "13": {
+      "slotIndex": 0,
+      "name": "下框眼镜"
+    },
+    "14": {
+      "slotIndex": 0,
+      "name": "椭圆读书眼镜"
+    },
+    "15": {
+      "slotIndex": 0,
+      "name": "典雅无框眼镜"
+    },
+    "16": {
+      "slotIndex": 0,
+      "name": "猫眼眼镜"
+    },
+    "17": {
+      "slotIndex": 0,
+      "name": "窄框眼镜"
+    },
+    "18": {
+      "slotIndex": 0,
+      "name": "彩色护目镜"
+    },
+    "19": {
+      "slotIndex": 0,
+      "name": "左侧眼罩"
+    },
+    "20": {
+      "slotIndex": 0,
+      "name": "右侧眼罩"
+    },
+    "21": {
+      "slotIndex": 0,
+      "name": "左侧金属眼罩"
+    },
+    "22": {
+      "slotIndex": 0,
+      "name": "右侧金属眼罩"
+    },
+    "23": {
+      "slotIndex": 0,
+      "name": "豹目眼镜"
+    },
+    "24": {
+      "slotIndex": 0,
+      "name": "阅读眼镜"
+    },
+    "25": {
+      "slotIndex": 0,
+      "name": "淡色眼镜"
+    },
+    "26": {
+      "slotIndex": 0,
+      "name": "时髦眼镜"
+    },
+    "27": {
+      "slotIndex": 0,
+      "name": "渐变色镜框眼镜"
+    },
+    "28": {
+      "slotIndex": 0,
+      "name": "厚框眼镜"
+    },
+    "29": {
+      "slotIndex": 0,
+      "name": "左侧秘银镶边眼罩"
+    },
+    "30": {
+      "slotIndex": 0,
+      "name": "右侧秘银镶边眼罩"
+    },
+    "31": {
+      "slotIndex": 0,
+      "name": "左侧皮饰眼罩"
+    },
+    "32": {
+      "slotIndex": 0,
+      "name": "右侧皮饰眼罩"
+    },
+    "33": {
+      "slotIndex": 0,
+      "name": "斯卡艾瓦头甲"
+    },
+    "34": {
+      "slotIndex": 0,
+      "name": "●RTI2シリーズ（キャスター）"
+    },
+    "35": {
+      "slotIndex": 0,
+      "name": "战术护目镜"
+    },
+    "36": {
+      "slotIndex": 0,
+      "name": "遮光面罩"
+    },
+    "37": {
+      "slotIndex": 0,
+      "name": "猫眼读书眼镜"
+    },
+    "38": {
+      "slotIndex": 0,
+      "name": "教授眼镜"
+    },
+    "39": {
+      "slotIndex": 0,
+      "name": "小夹鼻眼镜"
+    },
+    "40": {
+      "slotIndex": 0,
+      "name": "装饰彩蛋眼镜"
+    },
+    "41": {
+      "slotIndex": 0,
+      "name": "四颗彩蛋眼镜"
+    },
+    "42": {
+      "slotIndex": 0,
+      "name": "窄框彩蛋眼镜"
+    },
+    "43": {
+      "slotIndex": 0,
+      "name": "魔石精眼镜"
+    },
+    "44": {
+      "slotIndex": 0,
+      "name": "彩蛋小鸡眼镜"
+    },
+    "45": {
+      "slotIndex": 0,
+      "name": "彩花装饰眼镜"
+    },
+    "46": {
+      "slotIndex": 0,
+      "name": "纯色眼罩"
+    },
+    "47": {
+      "slotIndex": 0,
+      "name": "全息眼镜"
+    },
+    "48": {
+      "slotIndex": 0,
+      "name": "左侧折布眼罩"
+    },
+    "49": {
+      "slotIndex": 0,
+      "name": "右侧折布眼罩"
+    },
+    "50": {
+      "slotIndex": 0,
+      "name": "全息护目镜"
+    },
+    "51": {
+      "slotIndex": 0,
+      "name": "黑色墨镜"
+    },
+    "52": {
+      "slotIndex": 0,
+      "name": "基础款椭圆眼镜"
+    },
+    "53": {
+      "slotIndex": 0,
+      "name": "泪滴形眼镜"
+    },
+    "54": {
+      "slotIndex": 0,
+      "name": "左侧皮带眼罩"
+    },
+    "55": {
+      "slotIndex": 0,
+      "name": "右侧皮带眼罩"
+    },
+    "56": {
+      "slotIndex": 0,
+      "name": "左侧钉扣眼罩"
+    },
+    "57": {
+      "slotIndex": 0,
+      "name": "右侧钉扣眼罩"
+    },
+    "58": {
+      "slotIndex": 0,
+      "name": "古董单眼镜"
+    },
+    "59": {
+      "slotIndex": 0,
+      "name": "厚框护目镜"
+    },
+    "60": {
+      "slotIndex": 0,
+      "name": "半框眼镜"
+    },
+    "61": {
+      "slotIndex": 0,
+      "name": "罩眼式墨镜"
+    }
+  }
+}

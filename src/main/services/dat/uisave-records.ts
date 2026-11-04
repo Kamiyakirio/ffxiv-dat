@@ -157,25 +157,29 @@ export function decodeUiRecords(
     for (let index = 0; index < count[0]; index++) {
       const name = fixed(list[cursor++], 'n', 61);
       const length = fixed(list[cursor++], 'l', 1);
-      if (!name || !length) return null;
+      if (!name || !length || length[0] > 100) return null;
       const itemFields: Field[] = [];
       while (cursor < list.length && list[cursor].tag !== 'n')
         itemFields.push(list[cursor++]);
-      // All six sampled files either omit this segment or save empty sets.
-      // Nonempty item serialization must not be invented from the memory arrays.
-      if (length[0])
-        unknown.push({
-          field: `sets[${index}].items`,
-          reason:
-            '非空失传技能预设的标签与物品/数量对应尚无正样本，原字段完整保留。',
-          kind: 'meaning',
-        });
-      if (itemFields.length) unknown.push(...unknowns(itemFields));
+      // Client writer 0x14080b878..0x14080b923 emits parallel u8 i/s
+      // vectors. Reader 0x14080bb90..0x14080bbfd caps each vector at 100;
+      // its consumer 0x140de74f2/0x140de755a uses MYCItem IDs/quantities.
+      const itemIds = length[0] ? fixed(itemFields[0], 'i', length[0]) : null;
+      const quantities = length[0]
+        ? fixed(itemFields[1], 's', length[0])
+        : null;
+      if (length[0] && (!itemIds || !quantities)) return null;
+      const items = Array.from({ length: length[0] }, (_, itemIndex) => ({
+        index: itemIndex,
+        mycItemId: itemIds![itemIndex],
+        quantity: quantities![itemIndex],
+      }));
+      unknown.push(...unknowns(itemFields.slice(length[0] ? 2 : 0)));
       sets.push({
         index,
         name: cstring(name),
         numItems: length[0],
-        items: length[0] ? null : [],
+        items,
         itemFields: retained(itemFields),
       });
     }
@@ -189,7 +193,13 @@ export function decodeUiRecords(
       setBitIndices: setBits,
       fields: retained(list),
       coverage: coverage(
-        ['setCount', 'sets.name', 'sets.numItems'],
+        [
+          'setCount',
+          'sets.name',
+          'sets.numItems',
+          'sets.items.mycItemId',
+          'sets.items.quantity',
+        ],
         ['setBitIndices'],
         [
           ...unknown,

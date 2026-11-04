@@ -3,7 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 
 const targetFolders = [
-  'games',
+  'game',
   'my games',
   'final fantasy xiv - a realm reborn',
 ];

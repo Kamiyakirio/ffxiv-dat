@@ -256,6 +256,7 @@ export function enrichDecodedData(data: Row, filename: string): void {
     aetheryteId: ['Aetheryte', 'destinationName'],
     contentFinderConditionId: ['ContentFinderCondition', 'dutyName'],
     petId: ['XBMPet', 'petName'],
+    mycItemId: ['MYCTemporaryItem', 'mycItemName'],
   };
   const walk = (value: unknown) => {
     if (!value || typeof value !== 'object') return;

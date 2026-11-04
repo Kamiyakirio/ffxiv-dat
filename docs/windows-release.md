@@ -41,3 +41,23 @@ npm run make:windows
 ```
 
 产物位于 `out/make/zip/win32/x64/`。
+
+### Electron 下载镜像
+
+`npm start`、`npm run package` 和 `npm run make:windows` 默认从 npmmirror
+国内镜像下载 Electron 二进制文件。配置位于 `forge.config.mts`，使用
+`ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` 和
+`ELECTRON_CUSTOM_DIR={{ version }}`，不需要修改全局 npm 配置。
+
+如果下载已经开始，按 `Ctrl+C` 停止后重新执行原命令，使镜像配置生效。
+
+可以通过环境变量覆盖默认值。例如，在 PowerShell 中临时切回官方源：
+
+```powershell
+$env:ELECTRON_MIRROR = 'https://github.com/electron/electron/releases/download/'
+$env:ELECTRON_CUSTOM_DIR = 'v{{ version }}'
+npm run make:windows
+```
+
+这些环境变量也适用于直接运行 `npx install-electron --no`；该命令不会加载
+Forge 配置，需要先手动设置镜像环境变量。

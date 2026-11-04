@@ -7,6 +7,10 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
+// Shared by Electron's on-demand installer and Forge's packager.
+process.env.ELECTRON_MIRROR ??= 'https://npmmirror.com/mirrors/electron/';
+process.env.ELECTRON_CUSTOM_DIR ??= '{{ version }}';
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,

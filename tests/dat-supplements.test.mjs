@@ -111,7 +111,7 @@ test('seen lore and support jobs validate declared vector lengths and expose all
   }
 });
 
-test('empty lost-action presets retain the flags and names while refusing to invent the nonempty item serialization', () => {
+test('empty lost-action presets retain flags and names and reject missing nonempty vectors', () => {
   const name = Buffer.alloc(61);
   name.write('合成预设');
   const data = Buffer.concat([
@@ -129,11 +129,86 @@ test('empty lost-action presets retain the flags and names while refusing to inv
   assert(decoded.coverage.unknownFields.some((f) => f.field === 'seenFlags'));
   const nonempty = Buffer.from(data);
   nonempty[nonempty.length - 1] = 1;
+  assert.equal(decodeUiRecords(20, 1, nonempty), null);
+});
+
+test('nonempty lost-action presets pair MYCItem identities and quantities by position and retain extra tags', () => {
+  const name = Buffer.alloc(61);
+  name.write('失传技能预设');
+  const data = Buffer.concat([
+    field('A', Buffer.alloc(13)),
+    field('S', [2]),
+    field('n', name),
+    field('l', [3]),
+    field('i', [7, 2, 99]),
+    field('s', [1, 17, 255]),
+    field('Z', [0xaa]),
+    field('n', Buffer.alloc(61)),
+    field('l', [0]),
+  ]);
+  const decoded = decodeUiRecords(20, 1, data);
+  assert.deepEqual(decoded.sets[0].items, [
+    { index: 0, mycItemId: 7, quantity: 1 },
+    { index: 1, mycItemId: 2, quantity: 17 },
+    { index: 2, mycItemId: 99, quantity: 255 },
+  ]);
+  assert.equal(decoded.sets[0].name, '失传技能预设');
+  assert.equal(decoded.sets[0].numItems, 3);
+  assert.deepEqual(decoded.sets[1].items, []);
+  assert.deepEqual(
+    decoded.sets[0].itemFields.map((entry) => [entry.tag, entry.valueHex]),
+    [
+      ['i', '070263'],
+      ['s', '0111ff'],
+      ['Z', 'aa'],
+    ],
+  );
+  assert.equal(decoded.fields.length, 9);
+  assert(decoded.coverage.knownFields.includes('sets.items.mycItemId'));
+  assert(decoded.coverage.knownFields.includes('sets.items.quantity'));
   assert(
-    decodeUiRecords(20, 1, nonempty).coverage.unknownFields.some(
-      (f) => f.field === 'sets[0].items',
+    decoded.coverage.unknownFields.some((entry) =>
+      entry.field.startsWith('fields.Z@'),
     ),
   );
+  assert(
+    decoded.coverage.unknownFields.some((entry) => entry.field === 'seenFlags'),
+  );
+  assert.equal(decodeUiRecords(20, 2, data), null);
+  assert.throws(
+    () => decodeUiRecords(20, 1, data.subarray(0, -1)),
+    /Truncated/,
+  );
+});
+
+test('lost-action preset vectors validate counts, byte widths, tag order and the 100-item limit', () => {
+  const preset = (count, ids, quantities, quantityTag = 's', setCount = 1) =>
+    Buffer.concat([
+      field('A', Buffer.alloc(13)),
+      field('S', [setCount]),
+      field('n', Buffer.alloc(61)),
+      field('l', [count]),
+      field('i', ids),
+      field(quantityTag, quantities),
+    ]);
+  const ids = Buffer.from(Array.from({ length: 100 }, (_, index) => index));
+  const quantities = Buffer.alloc(100, 2);
+  const data = preset(100, ids, quantities);
+  assert.deepEqual(decodeUiRecords(20, 1, data).sets[0].items[99], {
+    index: 99,
+    mycItemId: 99,
+    quantity: 2,
+  });
+  for (const invalid of [
+    preset(101, Buffer.alloc(101), Buffer.alloc(101)),
+    preset(100, ids.subarray(0, 99), quantities),
+    preset(100, ids, quantities.subarray(0, 99)),
+    preset(100, ids, Buffer.alloc(101)),
+    preset(100, ids, quantities, 'x'),
+    preset(100, ids, quantities, 's', 11),
+  ]) {
+    assert.equal(decodeUiRecords(20, 1, invalid), null);
+  }
 });
 
 test('CRAFT exposes its real flags field and reports an unrecognized favorite stream instead of an empty success', () => {

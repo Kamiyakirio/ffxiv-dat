@@ -1,3 +1,6 @@
+import { decodeNativeUiSegment } from './uisave-native.ts';
+import { decodeNativeCwls } from './uisave-cwls.ts';
+
 function uints(data: Buffer, offset: number, count: number, width: number) {
   if (offset + count * width > data.length)
     throw new RangeError('Truncated UISAVE list');
@@ -109,14 +112,6 @@ function decodeAdditionalUiSegmentData(
       note: 'Group/title and 50 contact record strides are supported by the historical UISAVE reader and positive names/Content IDs. Other social blocks are not mapped to friend/blacklist/mutelist categories.',
     };
   }
-  if (id === 6 && version === 90 && data.length === 288) {
-    return {
-      firstTierCandidate: [...data.subarray(0, 128)],
-      secondTierCandidate: [...data.subarray(128, 256)],
-      unknownSuffixHex: data.subarray(256).toString('hex'),
-      note: 'ItemContextCustomizeModule defines two 128-byte tier arrays; sampled data are zero, so these candidate offsets have no positive-value validation.',
-    };
-  }
   if (id === 11 && version === 0 && data.length >= 16) {
     const chunks: Record<string, unknown>[] = [];
     let offset = 0;
@@ -206,19 +201,6 @@ function decodeAdditionalUiSegmentData(
       note: 'Five packed 333-byte action/name/hotbar sets plus 160 bytes consume this version exactly. The final 32-byte-per-set macro flag masks are candidates; bit ordering is not verified.',
     };
   }
-  if (id === 13 && version === 4 && data.length === 1456) {
-    return {
-      headerHex: data.subarray(0, 8).toString('hex'),
-      firstEightLinkshellIdCandidates: Array.from({ length: 8 }, (_, slot) => ({
-        slot,
-        offset: 8 + slot * 8,
-        id: data.readBigUInt64LE(8 + slot * 8).toString(),
-      })),
-      printableStringCandidates: stringCandidates(data),
-      unknownRemainderHex: data.subarray(72).toString('hex'),
-      note: 'The historical reader identifies the CWLS slot-assignment block, but this version has additional unmapped data.',
-    };
-  }
   if (id === 22 && version === 102 && data.length === 1376) {
     return {
       headerHex: data.subarray(0, 8).toString('hex'),
@@ -237,20 +219,6 @@ function decodeAdditionalUiSegmentData(
       trailerHex: data.subarray(1368).toString('hex'),
     };
   }
-  if (id === 34 && version === 0 && data.length === 400) {
-    return {
-      wishlistItemIdsCandidate: uints(data, 0, 16, 4),
-      unknownRemainderHex: data.subarray(64).toString('hex'),
-      note: 'The current source exposes 16 wishlist IDs at the first module data offset. Both sampled blocks are entirely zero; count is not available in the serialized bytes.',
-    };
-  }
-  if (id === 42 && version === 100 && data.length === 42) {
-    return {
-      unknownPrefix: data.readUInt16LE(0),
-      glassesIdListCandidate: uints(data, 2, 20, 2),
-      note: 'This matches the prefix + u16 list pattern of other collection modules, but GlassesModule fields are not yet defined in the source.',
-    };
-  }
   return null;
 }
 
@@ -259,6 +227,9 @@ export function decodeAdditionalUiSegment(
   version: number,
   data: Buffer,
 ): Record<string, unknown> | null {
+  if (id === 13) return decodeNativeCwls(version, data);
+  const native = decodeNativeUiSegment(id, version, data);
+  if (native) return native;
   const decoded = decodeAdditionalUiSegmentData(id, version, data);
   if (!decoded) return null;
   type Unknown = {
@@ -328,14 +299,6 @@ export function decodeAdditionalUiSegment(
         '联系人后24字节无已核对的字段对应。',
       );
       break;
-    case 6:
-      candidateFields = ['firstTierCandidate', 'secondTierCandidate'];
-      meaning(
-        'firstTierCandidate/secondTierCandidate',
-        '源码定义两个128字节物品菜单层级表，但现有样本全零，不能确定每个下标对应哪一菜单项。',
-      );
-      storage('unknownSuffixHex');
-      break;
     case 11:
       knownFields = ['chunks.key', 'chunks.length', 'chunks.dataHex'];
       for (const chunk of decoded.chunks as Record<string, unknown>[]) {
@@ -399,14 +362,6 @@ export function decodeAdditionalUiSegment(
         '尾部160字节与5组各32字节对应，但位顺序及标志含义尚未通过读写函数验证。',
       );
       break;
-    case 13:
-      candidateFields = ['firstEightLinkshellIdCandidates'];
-      storage('headerHex');
-      meaning(
-        'unknownRemainderHex',
-        '当前CWLS版本比历史读者定义多出数据，尚不能确定后续数据的字段和记录边界。',
-      );
-      break;
     case 22:
       candidateFields = ['retainersCandidate.id', 'retainersCandidate.comment'];
       storage('headerHex');
@@ -414,22 +369,6 @@ export function decodeAdditionalUiSegment(
       storage('trailerHex');
       decoded.note =
         '结构定义明确给出ID与91字节备注字段，记录步长与样本一致；现有样本所有ID均为零，未验证非空备注关联。';
-      break;
-    case 34:
-      candidateFields = ['wishlistItemIdsCandidate'];
-      meaning(
-        'wishlistItemIdsCandidate',
-        '源码提供16个收藏物品ID字段，但所有样本都为空，没有非零值验证磁盘起始偏移。',
-      );
-      storage('unknownRemainderHex');
-      break;
-    case 42:
-      candidateFields = ['glassesIdListCandidate'];
-      meaning('unknownPrefix', '前导u16用途未知。');
-      meaning(
-        'glassesIdListCandidate',
-        '当前源码只定义模块大小，没有说明20个ID的具体列表种类；有值可查名称，但不能标成收藏或已解锁。',
-      );
       break;
   }
   return {
