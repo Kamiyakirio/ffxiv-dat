@@ -16,15 +16,29 @@ export function decodeConfigCopy(bytes: Buffer): DatDecodeResult {
     .map((field) => field.text);
   const idHex = idParts.join('');
   const timeHex = timeParts.join('');
-  const timestamp = /^[0-9a-f]{16}$/i.test(timeHex)
-    ? Number(BigInt(`0x${timeHex}`))
+  const timestampInteger = /^[0-9a-f]{16}$/i.test(timeHex)
+    ? BigInt(`0x${timeHex}`)
     : null;
+  const timestamp =
+    timestampInteger !== null &&
+    timestampInteger <= BigInt(Number.MAX_SAFE_INTEGER)
+      ? Number(timestampInteger)
+      : null;
+  const contentIdHex = /^[0-9a-f]{16}$/i.test(idHex)
+    ? idHex.toUpperCase()
+    : null;
+  const formatMatches =
+    sections.map((section) => section.tag).join('') === 'NWIIITTT' &&
+    worldBytes?.length === 2 &&
+    contentIdHex !== null;
   return {
     status: 'partial',
     data: {
       name: names[0]?.text ?? null,
       worldId: worldBytes?.length === 2 ? worldBytes.readUInt16LE() : null,
-      contentIdHex: /^[0-9a-f]{16}$/i.test(idHex) ? idHex : null,
+      contentIdHex,
+      contentId: contentIdHex ? BigInt(`0x${contentIdHex}`).toString() : null,
+      timestampInteger: timestampInteger?.toString() ?? null,
       timestampCandidate: timestamp,
       timestampIsoCandidate:
         timestamp !== null && timestamp < 253402300800
@@ -33,8 +47,31 @@ export function decodeConfigCopy(bytes: Buffer): DatDecodeResult {
       sections,
     },
     warnings: [
-      'Name/world/content ID shape is consistent across samples; timestamp semantics are inferred, not independently confirmed',
+      'Name/world/content ID fields are structurally decoded; the T value is preserved as an exact integer and its timestamp purpose remains inferred.',
     ],
+    coverage: {
+      structureComplete: true,
+      knownFields: ['name', 'worldId', 'contentIdHex', 'contentId', 'sections'],
+      candidateFields: ['timestampCandidate', 'timestampIsoCandidate'],
+      unknownFields: [
+        {
+          field: 'timestampInteger',
+          reason:
+            'T分片的64位值已无损拼接，数值对应合理Unix时间，但它具体代表何种缓存时间尚未证实。',
+          kind: 'meaning',
+        },
+        ...(!formatMatches
+          ? [
+              {
+                field: 'sections',
+                reason:
+                  '字段流完整，但未匹配已核验的N/W/I/I/I/T/T/T缓存记录序列。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
+      ],
+    },
   };
 }
 
@@ -77,7 +114,24 @@ export function decodeCharacterPreset(bytes: Buffer): DatDecodeResult {
   const customize = Object.fromEntries(
     names.map((name, index) => [name, bytes[16 + index]]),
   );
-  const commentBytes = bytes.subarray(48, 88);
+  // CustomizeData bit definitions are explicit in DrawDataContainer.cs.
+  Object.assign(customize, {
+    highlights: (bytes[23] & 0x80) !== 0,
+    facialFeaturesEnabled: Array.from(
+      { length: 7 },
+      (_, i) => (bytes[28] & (1 << i)) !== 0,
+    ),
+    legacyTattoo: (bytes[28] & 0x80) !== 0,
+    eyeShape: bytes[32] & 0x7f,
+    smallIris: (bytes[32] & 0x80) !== 0,
+    mouth: bytes[35] & 0x7f,
+    lipstick: (bytes[35] & 0x80) !== 0,
+    facePaint: bytes[40] & 0x7f,
+    facePaintReversed: (bytes[40] & 0x80) !== 0,
+  });
+  // Anamnesis DatCharacterFile.GetName reads all 164 bytes from +0x30,
+  // not only 40 bytes; UTF-8 comments can require more than one byte/character.
+  const commentBytes = bytes.subarray(48);
   const nul = commentBytes.indexOf(0);
   const timestamp = bytes.readUInt32LE(44);
   // Independently verified against the sample using Anamnesis DatCharacterFile.
@@ -102,11 +156,56 @@ export function decodeCharacterPreset(bytes: Buffer): DatDecodeResult {
       timestamp,
       createdAt: new Date(timestamp * 1000).toISOString(),
       comment: decodeUtf8(commentBytes.subarray(0, nul < 0 ? undefined : nul)),
+      commentStorageHex: commentBytes.toString('hex'),
+      commentTerminatorOffset: nul < 0 ? null : 48 + nul,
+      paddingAfterCommentHex:
+        nul < 0 ? '' : commentBytes.subarray(nul + 1).toString('hex'),
       reservedTailHex: bytes.subarray(88).toString('hex'),
     },
     warnings: [
       'Appearance byte fields follow CustomizeData and the documented preset layout; race-specific color/shape IDs require game data tables; trailing storage semantics remain unverified',
       ...(checksumMatches ? [] : ['Character preset checksum does not match']),
     ],
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'customize.race',
+        'customize.sex',
+        'customize.bodyType',
+        'customize.height',
+        'customize.tribe',
+        'customize.face',
+        'customize.hairstyle',
+        'customize.highlights',
+        'customize.facialFeaturesEnabled',
+        'customize.legacyTattoo',
+        'customize.eyeShape',
+        'customize.smallIris',
+        'customize.mouth',
+        'customize.lipstick',
+        'customize.facePaint',
+        'customize.facePaintReversed',
+        'customize (remaining raw option indices)',
+        'voice',
+        'timestamp',
+        'comment',
+        'checksumMatches',
+      ],
+      candidateFields: [],
+      unknownFields: [
+        {
+          field: 'reservedHeaderHex / reservedByte / paddingAfterCommentHex',
+          reason:
+            '保留存储字节没有已发布的业务用途；不影响外观选项、备注和校验的读取。',
+          kind: 'storage',
+        },
+        {
+          field: 'customize colour/style option indices',
+          reason:
+            '选项编号已读取；实际色板RGB和特定种族的样式资源仍需关联游戏资源。',
+          kind: 'reference',
+        },
+      ],
+    },
   };
 }

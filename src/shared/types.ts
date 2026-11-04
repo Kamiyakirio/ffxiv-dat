@@ -37,6 +37,28 @@ export interface DecodedFileDetail {
   checks: Record<string, unknown>[];
   warnings: string[];
   sha256: string;
+  readable?: ReadableSection[];
+  coverage?: DecodeCoverage;
+}
+
+export interface DecodeCoverage {
+  structureComplete: boolean;
+  knownFields: string[];
+  candidateFields: string[];
+  unknownFields: {
+    field: string;
+    reason: string;
+    kind?: 'meaning' | 'storage' | 'reference';
+  }[];
+}
+
+export interface ReadableSection {
+  id: string;
+  title: string;
+  sourceId?: string;
+  note?: string;
+  columns: { key: string; label: string }[];
+  rows: Record<string, string | number | null>[];
 }
 
 export interface DecodeReport {

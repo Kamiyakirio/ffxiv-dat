@@ -54,7 +54,10 @@ test('UISAVE removes the inner marker and applies only the additional XOR mask',
   assert.equal(segment.decodedHex, plain.toString('hex'));
   assert.equal(segment.data.unseen[0], 123);
   assert.equal(segment.data.favorites[0], 456);
-  assert.equal(segment.status, 'partial');
+  assert.equal(segment.status, 'decoded');
+  assert.ok(
+    segment.coverage.unknownFields.every((field) => field.kind === 'storage'),
+  );
 });
 
 test('UISAVE does not discard an unknown segment or overrun a truncated section', () => {

@@ -4,6 +4,15 @@ import { setImmediate } from 'node:timers/promises';
 import { randomUUID } from 'node:crypto';
 import { decodeDat } from './dat/decoder.ts';
 import type { DecodedDat } from './dat/decoder.ts';
+import {
+  equipmentSlotName,
+  gameName,
+  itemName,
+  linkHotbarReferences,
+  enrichDecodedData,
+} from './dat/game-data.ts';
+import { readableSections } from './dat/readable.ts';
+import { coverageStatus } from './dat/coverage.ts';
 import type {
   GameDirectory,
   CharacterDirectory,
@@ -117,6 +126,7 @@ export class DatWorkspace {
   getResult(id: string): DecodedFileDetail {
     const result = this.results.get(id);
     if (!result) throw new Error('这份结果已失效，请重新开始解码。');
+    result.readable ??= readableSections(result);
     return result;
   }
 
@@ -155,7 +165,13 @@ export class DatWorkspace {
         category,
         parentId,
         byteLength: decoded.byteLength,
-        status: error ? 'error' : decoded.result.status,
+        status: error
+          ? 'error'
+          : decoded.result.status === 'unsupported'
+            ? 'unsupported'
+            : decoded.result.coverage
+              ? coverageStatus(decoded.result.coverage)
+              : decoded.result.status,
         warningCount: decoded.result.warnings.length,
         error,
       };
@@ -167,6 +183,7 @@ export class DatWorkspace {
         checks: decoded.checks,
         warnings: decoded.result.warnings,
         sha256: decoded.sha256,
+        coverage: decoded.result.coverage,
       });
       for (const member of decoded.members)
         add(
@@ -238,6 +255,79 @@ export class DatWorkspace {
         total: sources.length,
         filename: relativePath,
       });
+    }
+    for (const file of files) {
+      const detail = this.results.get(file.id);
+      if (!detail) continue;
+      enrichDecodedData(detail.data, file.name);
+      if (
+        file.name.toUpperCase() === 'GEARSET.DAT' &&
+        Array.isArray(detail.data.records)
+      ) {
+        for (const record of detail.data.records) {
+          record.classJobName = gameName('ClassJob', record.classJobId);
+          record.glassesNames = (record.glassesIds ?? []).map((id: number) =>
+            id ? (gameName('Glasses', id) ?? `眼镜 ${id}`) : '无',
+          );
+          for (const item of record.items ?? []) {
+            item.slotLabel = equipmentSlotName(item.slot);
+            item.stainNames = (item.stainIds ?? []).map((id: number) =>
+              id === 0 ? '无染色' : (gameName('Stain', id) ?? `染色 ${id}`),
+            );
+            item.materiaDetails = (item.materia ?? [])
+              .filter((value: { id: number }) => value.id !== 0)
+              .map((value: { id: number; grade: number }) => ({
+                ...value,
+                name:
+                  gameName('MateriaGrade', `${value.id}:${value.grade}`) ??
+                  gameName('MateriaEffect', `${value.id}:${value.grade}`) ??
+                  `未关联参数 ${value.id} / 保存等级 ${value.grade}`,
+                effect: gameName('MateriaEffect', `${value.id}:${value.grade}`),
+              }));
+            item.itemName = itemName(item.itemId);
+            item.glamourName = item.glamourId
+              ? itemName(item.glamourId)
+              : '未投影';
+          }
+        }
+      }
+      const related = (name: string, field: string) => {
+        const summary = files.find(
+          (entry) =>
+            entry.name.toUpperCase() === name &&
+            entry.parentId === file.parentId &&
+            entry.characterId === file.characterId,
+        );
+        const value = summary
+          ? this.results.get(summary.id)?.data[field]
+          : null;
+        return Array.isArray(value) ? value : [];
+      };
+      if (
+        file.name.toUpperCase() === 'HOTBAR.DAT' &&
+        Array.isArray(detail.data.slots)
+      ) {
+        linkHotbarReferences(
+          detail.data.slots,
+          related('MACRO.DAT', 'macros'),
+          related('GEARSET.DAT', 'records'),
+        );
+      }
+      if (
+        file.name.toUpperCase() === 'UISAVE.DAT' &&
+        Array.isArray(detail.data.segments)
+      ) {
+        for (const segment of detail.data.segments) {
+          if (segment.id !== 41 || !Array.isArray(segment.data.panels))
+            continue;
+          for (const panel of segment.data.panels)
+            linkHotbarReferences(
+              panel.slots,
+              related('MACRO.DAT', 'macros'),
+              related('GEARSET.DAT', 'records'),
+            );
+        }
+      }
     }
     return {
       files,

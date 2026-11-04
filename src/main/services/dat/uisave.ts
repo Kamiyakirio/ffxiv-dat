@@ -3,6 +3,8 @@ import { decodeTofu } from './uisave-tofu.ts';
 import { decodeBanners } from './uisave-banner.ts';
 import { decodeAdditionalUiSegment } from './uisave-other.ts';
 import { decodeRemainingUiSegment } from './uisave-remaining.ts';
+import { segmentCoverage, coverageStatus } from './coverage.ts';
+import { decodeUiRecords } from './uisave-records.ts';
 
 // Names and field candidates follow FFXIVClientStructs b72bc1f73,
 // Client/UI/Misc/UiSavePackModule.cs and the corresponding *Module.cs files.
@@ -113,17 +115,14 @@ function value(field: Field): Buffer {
   return Buffer.from(field.valueHex, 'hex');
 }
 
-function candidate(data: Record<string, unknown>): Interpretation {
+// Parsed record data; final status is determined from explicit per-field coverage.
+function parsedRecord(data: Record<string, unknown>): Interpretation {
   return {
     status: 'partial',
     data: {
-      interpretation:
-        'candidate: source field layout and sampled disk size agree; game serialization was not executed',
       ...data,
     },
-    warnings: [
-      'Some offsets or reserved fields remain unverified; complete decoded bytes are retained.',
-    ],
+    warnings: [],
   };
 }
 
@@ -135,22 +134,24 @@ function interpretSegment(
   if (data.length === 0) {
     return { status: 'decoded', data: { empty: true }, warnings: [] };
   }
+  const records = decodeUiRecords(id, version, data);
+  if (records) return parsedRecord(records);
   const remaining = decodeRemainingUiSegment(id, version, data);
-  if (remaining) return candidate(remaining);
+  if (remaining) return parsedRecord(remaining);
   if (id === 23 && version === 0) {
     const banners = decodeBanners(data);
-    if (banners) return candidate(banners);
+    if (banners) return parsedRecord(banners);
   }
   if (id === 28 && version === 0) {
     const tofu = decodeTofu(data);
-    if (tofu) return candidate(tofu);
+    if (tofu) return parsedRecord(tofu);
   }
   const additional = decodeAdditionalUiSegment(id, version, data);
-  if (additional) return candidate(additional);
+  if (additional) return parsedRecord(additional);
 
   // Fixed lists have an internal two-byte prefix before the source arrays.
   if (id === 3 && version === 100 && data.length === 322) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       craftingTypes: Array.from({ length: 8 }, (_, craftType) => ({
         craftType,
@@ -160,6 +161,7 @@ function interpretSegment(
             offset,
             recipeId: data.readUInt16LE(offset),
             isFavoriteRaw: data[offset + 2],
+            isFavorite: data[offset + 2] !== 0,
             reserved: data[offset + 3],
           };
         }),
@@ -167,7 +169,7 @@ function interpretSegment(
     });
   }
   if (id === 5 && version === 101 && data.length === 122) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       history: Array.from({ length: 20 }, (_, slot) => {
         const offset = 2 + slot * 6;
@@ -176,6 +178,7 @@ function interpretSegment(
           offset,
           aetheryteId: data.readUInt16LE(offset),
           flags: data[offset + 2],
+          present: (data[offset + 2] & 1) !== 0,
           ward: data[offset + 3],
           plot: data[offset + 4],
           subIndex: data[offset + 5],
@@ -184,7 +187,7 @@ function interpretSegment(
     });
   }
   if (id === 8 && version === 102 && data.length === 310) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       history: uints(data, 2, 6),
       favorites: uints(data, 14, 20),
@@ -192,7 +195,7 @@ function interpretSegment(
     });
   }
   if ((id === 9 || id === 10) && version === 102 && data.length === 84) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       unseen: uints(data, 2, 10),
       favorites: uints(data, 22, 30),
@@ -204,7 +207,7 @@ function interpretSegment(
     });
   }
   if (id === 14 && version === 101 && data.length === 64) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       achievementWatchlist: uints(data, 2, 30),
       unknownSuffixHex: data.subarray(62).toString('hex'),
@@ -213,7 +216,7 @@ function interpretSegment(
   if (id === 15 && version === 100 && data.length === 240) {
     const vector = (offset: number) =>
       Array.from({ length: 4 }, (_, i) => data.readFloatLE(offset + i * 4));
-    return candidate({
+    return parsedRecord({
       cameraAngle: data.readFloatLE(12),
       cameraRotation: data.readFloatLE(32),
       cameraPositionCandidate: vector(48),
@@ -240,7 +243,7 @@ function interpretSegment(
   if (id === 17 && version === 101 && data.length === 3140) {
     // Disk start +16 / stride 104 agrees with the historical reader and
     // current FieldMarkerPreset structure, including millimetre coordinates.
-    return candidate({
+    return parsedRecord({
       headerHex: data.subarray(0, 16).toString('hex'),
       presets: Array.from({ length: 30 }, (_, slot) => {
         const offset = 16 + slot * 104;
@@ -265,37 +268,38 @@ function interpretSegment(
     });
   }
   if (id === 18 && version === 101 && data.length === 110) {
-    return candidate({
+    return parsedRecord({
       seenNoteFlags1: [...data.subarray(0, 55)],
       seenNoteFlags2: [...data.subarray(55)],
       note: 'Array names themselves are tentative in MycNoteModule.cs.',
     });
   }
   if (id === 19 && version === 101 && data.length === 22) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       unseenOrnaments: uints(data, 2, 10),
       idMeaning: 'Ornament.Order + 1',
     });
   }
   if (id === 24 && version === 100 && data.length === 22) {
-    return candidate({
+    return parsedRecord({
       unknownPrefixByte: data[0],
       automaticallyDisplayRecordRaw: data[1],
       unseenAdventureEntryIds: uints(data, 2, 10),
     });
   }
   if (id === 25 && version === 101 && data.length === 160) {
-    return candidate({
+    return parsedRecord({
       entries: Array.from({ length: 80 }, (_, index) => ({
         index,
         numSubEntriesSeen: data[index * 2],
         isUnseenRaw: data[index * 2 + 1],
+        isUnseen: data[index * 2 + 1] !== 0,
       })),
     });
   }
   if (id === 26 && version === 400 && data.length === 52) {
-    return candidate({
+    return parsedRecord({
       seenNotes: Array.from({ length: 4 }, (_, series) => ({
         series,
         contents: [...data.subarray(series * 13, series * 13 + 13)],
@@ -303,7 +307,7 @@ function interpretSegment(
     });
   }
   if (id === 27 && version === 100 && data.length === 2) {
-    return candidate({ action1: data[0], action2: data[1] });
+    return parsedRecord({ action1: data[0], action2: data[1] });
   }
   if (id === 32 && version === 0 && data.length === 1) {
     return {
@@ -313,10 +317,16 @@ function interpretSegment(
     };
   }
   if (id === 31 && version === 100 && data.length === 342) {
-    return candidate({
+    return parsedRecord({
       headerHex: data.subarray(0, 16).toString('hex'),
       unknownPrefixByte: data[16],
       setting: data[17],
+      settingName:
+        data[17] === 0
+          ? '显示过滤词编号'
+          : data[17] === 1
+            ? '隐藏整条消息'
+            : `未定义设置 ${data[17]}`,
       termFilters: Array.from({ length: 10 }, (_, index) => {
         const offset = 18 + index * 32;
         return {
@@ -325,24 +335,29 @@ function interpretSegment(
           term: text(data.subarray(offset, offset + 31)),
           termBytesHex: data.subarray(offset, offset + 31).toString('hex'),
           channelFlags: data[offset + 31],
+          channels: ['说话', '呼喊', '喊话', '悄悄话', '自定义情感动作'].filter(
+            (_, bit) => (data[offset + 31] & (1 << bit)) !== 0,
+          ),
+          unknownChannelBits: data[offset + 31] & ~0x1f,
         };
       }),
       termFiltersEnabledRaw: data[338],
+      termFiltersEnabled: data[338] !== 0,
       unknownSuffixHex: data.subarray(339).toString('hex'),
     });
   }
   if (id === 33 && version === 6 && data.length === 96) {
-    return candidate({
+    return parsedRecord({
       tankOrder: uints(data, 0, 16),
       healerOrder: uints(data, 32, 16),
       dpsOrder: uints(data, 64, 16),
     });
   }
   if (id === 35 && version === 0 && data.length === 16) {
-    return candidate({ seenDescriptionBitfields: uints(data, 0, 4, 4) });
+    return parsedRecord({ seenDescriptionBitfields: uints(data, 0, 4, 4) });
   }
   if (id === 36 && version === 0 && data.length === 240) {
-    return candidate({
+    return parsedRecord({
       presets: Array.from({ length: 10 }, (_, index) => ({
         index,
         objectIds: uints(data, index * 24, 6, 4),
@@ -351,7 +366,7 @@ function interpretSegment(
   }
   if (id === 37 && version === 1 && data.length === 4) {
     const bpmSetting = data.readUInt16LE(0);
-    return candidate({
+    return parsedRecord({
       bpmSetting,
       beatsPerMinute: bpmSetting & 0x1ff,
       beatsPerMeasure: (bpmSetting >> 9) & 0x0f,
@@ -372,24 +387,13 @@ function interpretSegment(
     });
   }
 
-  const tlvIds = new Set([16, 20, 29, 30, 38, 39, 40, 41, 43, 44]);
-  if (tlvIds.has(id)) {
-    const parsed = fields(data, id === 41 ? 2 : 1);
+  if ((id === 29 && version === 100) || (id === 30 && version === 1)) {
+    const parsed = fields(data);
     if (parsed) {
       const result: Record<string, unknown> = {
         fields: parsed,
         completeFieldStream: true,
       };
-      if (
-        (id === 39 || id === 40) &&
-        parsed.length === 2 &&
-        parsed[0].tag === 'N' &&
-        parsed[0].length === 1 &&
-        parsed[1].tag === 'I'
-      ) {
-        result.declaredCount = value(parsed[0])[0];
-        result.seenIds = [...value(parsed[1])];
-      }
       if (
         id === 29 &&
         parsed.length === 2 &&
@@ -415,44 +419,12 @@ function interpretSegment(
           flag1: value(parsed[i * 3 + 2])[0],
         }));
       }
-      if (id === 41) {
-        const panels: Record<string, unknown>[] = [];
-        for (let i = 0; i + 1 < parsed.length; i++) {
-          if (
-            parsed[i].tag === 'S0' &&
-            parsed[i].length === 25 &&
-            parsed[i + 1].tag === 'S1' &&
-            parsed[i + 1].length === 100
-          ) {
-            const types = value(parsed[i]);
-            const ids = value(parsed[i + 1]);
-            panels.push({
-              index: panels.length,
-              slots: Array.from({ length: 25 }, (_, slot) => ({
-                slot,
-                type: types[slot],
-                commandId: ids.readUInt32LE(slot * 4),
-              })),
-            });
-          }
-        }
-        result.panels = panels;
-        result.note =
-          'S0/S1 correspond to QuickPanelModule command type/id arrays; other tags remain raw.';
-      }
-      if (id === 20) {
-        result.setNames = parsed
-          .filter((f) => f.tag === 'n')
-          .map((f) => text(value(f)));
-        result.note =
-          'MYCITEM sets are tagged variable records; remaining fields are retained without guessing.';
-      }
-      return candidate(result);
+      return parsedRecord(result);
     }
   }
 
   if (id === 0 && version === 101 && data.length === 2580) {
-    return candidate({
+    return parsedRecord({
       headerHex: data.subarray(0, 16).toString('hex'),
       countCandidate: data.readUInt32LE(4),
       records: Array.from({ length: 20 }, (_, index) => {
@@ -550,7 +522,38 @@ export function decodeUiSave(
     );
     if (trailer.some((byte) => byte !== 0))
       segmentWarnings.push('Nonzero segment trailer; purpose is unknown.');
-    const interpretation = interpretSegment(id, segmentVersion, decoded);
+    let interpretation: Interpretation;
+    try {
+      interpretation = interpretSegment(id, segmentVersion, decoded);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      interpretation = {
+        status: 'partial',
+        data: { decodedByteLength: decoded.length, parseError: reason },
+        warnings: [
+          `此子段解析未完成：${reason}；其他子段继续读取，原始字节已保留。`,
+        ],
+      };
+    }
+    const coverage = segmentCoverage(
+      id,
+      segmentVersion,
+      interpretation.data,
+      decoded.length,
+    );
+    if (
+      segmentWarnings.some(
+        (warning) =>
+          warning.includes('Duplicate') || warning.includes('exceeds'),
+      )
+    ) {
+      coverage.structureComplete = false;
+      coverage.unknownFields.push({
+        field: '子段结构',
+        reason: segmentWarnings.join('；'),
+        kind: 'meaning',
+      });
+    }
     segments.push({
       id,
       name: segmentNames[id] ?? `UNKNOWN_${id}`,
@@ -567,7 +570,8 @@ export function decodeUiSave(
         : 'no additional mask identified',
       rawHex: raw.toString('hex'),
       decodedHex: decoded.toString('hex'),
-      status: interpretation.status,
+      status: coverageStatus(coverage),
+      coverage,
       data: interpretation.data,
       warnings: [...segmentWarnings, ...interpretation.warnings],
     });
@@ -578,7 +582,36 @@ export function decodeUiSave(
       `Expected ${declaredCount} segments, found ${segments.length}.`,
     );
   return {
-    status: 'partial',
+    status:
+      version === 1 &&
+      completeContainer &&
+      offset === payload.length &&
+      segments.length === declaredCount &&
+      segments.every((segment) => segment.status === 'decoded')
+        ? 'decoded'
+        : 'partial',
+    coverage: {
+      structureComplete:
+        completeContainer &&
+        offset === payload.length &&
+        segments.length === declaredCount,
+      knownFields: segments
+        .filter((segment) => segment.status === 'decoded')
+        .map((segment) => `${segment.name}：主要字段已解释`),
+      candidateFields: segments
+        .filter((segment) => segment.status === 'partial')
+        .map((segment) => `${segment.name}：详见子段字段说明`),
+      unknownFields: segments.flatMap((segment) =>
+        (
+          (
+            segment.coverage as import('../../../shared/types.ts').DecodeCoverage
+          ).unknownFields ?? []
+        ).map((field) => ({
+          ...field,
+          field: `${segment.name} / ${field.field}`,
+        })),
+      ),
+    },
     data: {
       headerSize,
       declaredCount,
@@ -596,7 +629,9 @@ export function decodeUiSave(
     },
     warnings: [
       ...warnings,
-      'The container is decoded; some segment record meanings remain partial. See each segment status and retained bytes.',
+      ...(segments.some((segment) => segment.status === 'partial')
+        ? ['各子段已分别列出能解释的字段、候选对应和具体未定义字段。']
+        : []),
     ],
   };
 }

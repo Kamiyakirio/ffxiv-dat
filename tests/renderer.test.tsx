@@ -19,6 +19,8 @@ import type {
 import App from '../src/renderer/App';
 import DecodedContent from '../src/renderer/components/DecodedContent';
 import JsonTree from '../src/renderer/components/JsonTree';
+import { readableSections } from '../src/main/services/dat/readable';
+import { decodeHotbar } from '../src/main/services/dat/layouts';
 
 afterEach(() => {
   cleanup();
@@ -62,7 +64,7 @@ function detail(
   name: string,
   data: Record<string, unknown> = {},
 ): DecodedFileDetail {
-  return {
+  const result: DecodedFileDetail = {
     summary: summary(name),
     data,
     header: { version: 1 },
@@ -70,6 +72,8 @@ function detail(
     warnings: [],
     sha256: 'abc123',
   };
+  result.readable = readableSections(result);
+  return result;
 }
 
 function bridge(files = [summary('COMMON.DAT'), summary('KEYBIND.DAT')]) {
@@ -424,7 +428,7 @@ test('gearsets show equipment, glamour, quality and dyes', () => {
   view.getByText('1 / 2');
 });
 
-test('UISAVE segments reset tree expansion and expose technical data in the raw view', () => {
+test('UISAVE categories show readable records while preserving technical data in the raw view', () => {
   const view = render(
     <DecodedContent
       detail={detail('UISAVE.DAT', {
@@ -450,22 +454,13 @@ test('UISAVE segments reset tree expansion and expose technical data in the raw 
       .value,
     '3',
   );
-  const tree = view.container.querySelector(
-    '.segment-heading + .data-node',
-  ) as HTMLElement;
-  assert.equal(within(tree).queryByText('aabb'), null);
-  fireEvent.click(within(tree).getByRole('button', { name: '记录 1 项' }));
-  fireEvent.click(within(tree).getByRole('button', { name: '[0] 1 字段' }));
-  within(tree).getByText('Portrait');
+  assert.equal(view.queryByText('aabb'), null);
+  view.getByRole('cell', { name: 'Portrait' });
   fireEvent.change(view.getByRole('combobox', { name: '配置类别' }), {
     target: { value: '4' },
   });
-  assert.equal(
-    view
-      .getByRole('button', { name: '记录 1 项' })
-      .getAttribute('aria-expanded'),
-    'false',
-  );
+  view.getByRole('cell', { name: 'Board' });
+  assert.equal(view.queryByRole('cell', { name: 'Portrait' }), null);
   fireEvent.click(view.getByRole('button', { name: '结构数据' }));
   view.getByRole('button', { name: 'segments 2 项' });
 });
@@ -486,4 +481,84 @@ test('JSON tree lazily expands containers, pages entries and expands long text',
   fireEvent.click(view.getByRole('button', { name: '[0] 1 字段' }));
   fireEvent.click(view.getByRole('button', { name: '展开文本（500 字符）' }));
   view.getByText('x'.repeat(500));
+});
+
+test('hotbar readable view shows Limit Break rather than only GeneralAction and 3', () => {
+  const data = decodeHotbar(Buffer.from([3, 0, 0, 0, 0, 5, 5, 10]), 4).data;
+  const view = render(<DecodedContent detail={detail('HOTBAR.DAT', data)} />);
+  view.getByRole('cell', { name: '通用技能' });
+  view.getByText('极限技');
+  view.getByText('GeneralAction · ID 3');
+  fireEvent.change(view.getByRole('textbox', { name: '搜索解码内容' }), {
+    target: { value: '极限技' },
+  });
+  view.getByText('极限技');
+});
+
+test('item finder readable view pairs the item name with its quantity and hides format fields', () => {
+  const view = render(
+    <DecodedContent
+      detail={detail('ITEMFDR.DAT', {
+        retainers: [],
+        retainerFormatVersion: 200,
+        saddleBagFormatVersion: 200,
+        saddleBag: { itemIds: [0, 4650], itemCounts: [0, 23] },
+        premiumSaddleBag: { itemIds: [], itemCounts: [] },
+        glamourDresser: { itemIds: [] },
+        cabinet: { setBitIndices: [] },
+      })}
+    />,
+  );
+  const row = view.getByRole('row', { name: /水煮蛋/ });
+  within(row).getByRole('cell', { name: '23' });
+  within(row).getByRole('cell', { name: '1 / 2' });
+  assert.equal(view.queryByText('retainerFormatVersion'), null);
+  assert.equal(view.queryByRole('button', { name: /物品 ID/ }), null);
+  fireEvent.click(view.getByRole('button', { name: '结构数据' }));
+  view.getByText('retainerFormatVersion');
+});
+
+test('coverage distinguishes resolved fields from specific unknown fields instead of warning about every field', () => {
+  const value = detail('UISAVE.DAT', {
+    segments: [
+      {
+        id: 23,
+        name: 'BANNER',
+        status: 'partial',
+        coverage: {
+          structureComplete: true,
+          knownFields: ['镜头位置', '背景名称'],
+          candidateFields: [],
+          unknownFields: [
+            {
+              field: 'tag 24',
+              reason: '此标签用途尚未定义。',
+              kind: 'meaning',
+            },
+          ],
+        },
+        data: {
+          chunks: [
+            {
+              records: [
+                {
+                  recordIndex: 0,
+                  backgroundName: '四边形',
+                  timelineName: '绅士风度',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const view = render(<DecodedContent detail={value} />);
+  view.getByText('结构读取完整');
+  view.getByText(/已解释 2 类字段/);
+  view.getByText(/1 项含义或关联待核对/);
+  view.getByText('逐项解析范围与剩余缺口');
+  view.getByRole('cell', { name: '四边形' });
+  view.getByRole('cell', { name: '绅士风度' });
+  assert.equal(view.queryByText('含未确认字段'), null);
 });

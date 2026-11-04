@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import type { DecodedFileDetail } from '../../shared/types';
 import JsonTree from './JsonTree';
+import ReadableContent from './ReadableContent';
+import DecodeCoverage from './DecodeCoverage';
+import type { DecodeCoverage as Coverage } from '../../shared/types';
+import {
+  segmentNames,
+  keyActionLabel,
+  settingLabel,
+} from '../../shared/dat-labels';
 
 type Row = Record<string, unknown>;
 
@@ -27,46 +35,6 @@ function keyLabel(value: unknown): string {
     .join(' + ')
     .replaceAll('NUMPAD', '小键盘 ');
 }
-
-const segmentNames: Record<string, string> = {
-  LETTER: '邮件记录',
-  RETTASK: '雇员任务',
-  FLAGS: '界面旗标',
-  RCFAV: '制作收藏',
-  UIDATA: '社交数据',
-  TLPH: '传送历史',
-  ITCC: '物品菜单',
-  PVPSET: 'PvP 设置',
-  EMTH: '表情历史',
-  MNONLST: '宠物收藏',
-  MUNTLST: '坐骑收藏',
-  EMJ: '多玛方城战',
-  AOZNOTE: '青魔法预设',
-  CWLS: '跨服通讯贝',
-  ARCHVLST: '成就关注',
-  GRPPOS: '集体动作设置',
-  CRAFT: '制作记录',
-  FMARKER: '场地标点',
-  MYCNOT: '战果笔记',
-  ORNMLST: '时尚配饰',
-  MYCITEM: '失传技能',
-  GRPSTAMP: '集体动作贴纸',
-  RTNR: '雇员备注',
-  BANNER: '肖像',
-  ADVNOTE: '探索笔记',
-  TOFU: '战术板',
-  FISHING: '捕鱼记录',
-  ACTION: '技能记录',
-  TFILTER: '屏蔽词',
-  READYC: '倒计时',
-  PTRLST: '小队职业排序',
-  CATSBM: '市场收藏',
-  DESCRI: '说明已读记录',
-  MJICWSP: '海岛预设',
-  PERFORM: '乐器演奏',
-  QPNL: '快捷面板',
-  GLASSES: '眼镜',
-};
 
 export default function DecodedContent({
   detail,
@@ -188,13 +156,23 @@ export default function DecodedContent({
                   {text(segmentNames[String(segment.name)] ?? segment.name)}
                 </h3>
                 <span className="status-badge partial">
-                  {segment.status === 'decoded' ? '已解析' : '含未确认字段'}
+                  {segment.coverage
+                    ? (segment.coverage as Coverage).structureComplete
+                      ? '结构读取完整'
+                      : '结构部分识别'
+                    : segment.status === 'decoded'
+                      ? '已解析'
+                      : '含未确认字段'}
                 </span>
               </div>
-              <JsonTree
+              <DecodeCoverage
+                coverage={segment.coverage as Coverage | undefined}
+              />
+              <ReadableContent
                 key={String(segment.id)}
-                value={segment.data}
-                presentation
+                sections={(detail.readable ?? []).filter(
+                  (section) => section.sourceId === String(segment.id),
+                )}
               />
               <details className="technical-details">
                 <summary>子段版本与原始字节</summary>
@@ -216,7 +194,7 @@ export default function DecodedContent({
           )}
         </>
       ) : mode === 'tree' ? (
-        <JsonTree value={data} presentation />
+        <ReadableContent sections={detail.readable ?? []} />
       ) : (
         <>
           <div className="viewer-toolbar">
@@ -252,8 +230,8 @@ export default function DecodedContent({
                       {id === 0
                         ? '共享'
                         : id >= 64
-                          ? `PvP 候选组 ${id}`
-                          : `职业候选组 ${id}`}
+                          ? `${(data.groupNames as Record<string, string> | undefined)?.[id] ?? 'PvP'} · 存储组 ${id}`
+                          : `${(data.groupNames as Record<string, string> | undefined)?.[id] ?? '职业'} · 候选组 ${id}`}
                     </option>
                   ))}
                 </select>
@@ -304,7 +282,7 @@ export default function DecodedContent({
                       <>
                         <th>热键栏 / 槽位</th>
                         <th>内容类型</th>
-                        <th>内容 ID</th>
+                        <th>内容</th>
                       </>
                     ) : (
                       <>
@@ -319,7 +297,15 @@ export default function DecodedContent({
                     <tr key={currentPage * pageSize + index}>
                       {mode === 'keys' ? (
                         <>
-                          <td className="code-value">{text(row.command)}</td>
+                          <td>
+                            {keyActionLabel(text(row.command))}
+                            {keyActionLabel(text(row.command)) !==
+                              text(row.command) && (
+                              <small className="cell-note">
+                                {text(row.command)}
+                              </small>
+                            )}
+                          </td>
                           <td>{keyLabel((row.keys as unknown[])?.[0])}</td>
                           <td>{keyLabel((row.keys as unknown[])?.[1])}</td>
                         </>
@@ -329,13 +315,29 @@ export default function DecodedContent({
                             {Number(row.barIndex) + 1} /{' '}
                             {Number(row.slotIndex) + 1}
                           </td>
-                          <td>{text(row.commandTypeName)}</td>
-                          <td className="code-value">{text(row.commandId)}</td>
+                          <td>
+                            {text(row.commandTypeLabel ?? row.commandTypeName)}
+                          </td>
+                          <td>
+                            <span>
+                              {text(row.commandName) || '未匹配到名称'}
+                            </span>
+                            <small className="cell-note">
+                              {text(row.commandTypeName)} · ID{' '}
+                              {text(row.commandId)}
+                            </small>
+                          </td>
                         </>
                       ) : (
                         <>
                           <td>
-                            <span className="code-value">{text(row.name)}</span>
+                            <span>{settingLabel(text(row.name))}</span>
+                            {settingLabel(text(row.name)) !==
+                              text(row.name) && (
+                              <small className="cell-note">
+                                {text(row.name)}
+                              </small>
+                            )}
                             {!!row.section && (
                               <small className="cell-note">
                                 {text(row.section)}
@@ -379,34 +381,75 @@ export default function DecodedContent({
               <details key={text(row.recordIndex)} className="gear-record">
                 <summary>
                   <span>
-                    <strong>{text(row.name || '未命名套装')}</strong>
+                    <strong>
+                      {row.isSavedGearsetSlot === false
+                        ? '附加结构记录（用途未确认）'
+                        : text(row.name || '未命名套装')}
+                    </strong>
                     <small>
-                      槽位 {text(row.recordIndex)} · 职业 ID{' '}
-                      {text(row.classJobId)}
+                      槽位 {text(row.recordIndex)} ·{' '}
+                      {text(row.classJobName) ||
+                        `职业 ID ${text(row.classJobId)}`}
                     </small>
                   </span>
                   <span>装等 {text(row.itemLevel)}</span>
                 </summary>
+                <p className="diagnostic-note">
+                  头部装备：{row.headgearVisible ? '显示' : '隐藏'} · 武器：
+                  {row.weaponsVisible ? '显示' : '隐藏'} · 面罩：
+                  {row.visorEnabled ? '开启' : '关闭'}
+                  {Array.isArray(row.glassesNames)
+                    ? ` · 眼镜：${row.glassesNames.join(' / ')}`
+                    : ''}
+                  {row.hasLinkedBanner
+                    ? ` · 肖像关联索引：${text(row.bannerIndex)}`
+                    : ''}
+                </p>
                 <div className="table-scroll">
                   <table>
                     <thead>
                       <tr>
                         <th>装备槽</th>
-                        <th>物品 ID</th>
-                        <th>幻化 ID</th>
-                        <th>染色 ID</th>
+                        <th>物品</th>
+                        <th>幻化</th>
+                        <th>染色</th>
+                        <th>魔晶石 / 保存属性</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows(row.items).map((item, index) => (
                         <tr key={index}>
-                          <td>{text(item.slot)}</td>
+                          <td>{text(item.slotLabel ?? item.slot)}</td>
                           <td>
-                            {text(item.baseItemId)}
-                            {item.highQuality ? ' · HQ' : ''}
+                            {text(item.itemName) ||
+                              `${text(item.baseItemId)}${item.highQuality ? ' · HQ' : ''}`}
+                            <small className="cell-note">
+                              ID {text(item.itemId)}
+                            </small>
                           </td>
-                          <td>{text(item.glamourId)}</td>
-                          <td>{(item.stainIds as number[]).join(' / ')}</td>
+                          <td>
+                            {text(item.glamourName) || text(item.glamourId)}
+                          </td>
+                          <td>
+                            {(
+                              (item.stainNames ?? item.stainIds) as (
+                                string | number
+                              )[]
+                            ).join(' / ')}
+                          </td>
+                          <td>
+                            {Array.isArray(item.materiaDetails)
+                              ? rows(item.materiaDetails)
+                                  .map((materia) => text(materia.name))
+                                  .join(' / ') || '无'
+                              : rows(item.materia)
+                                  .filter((materia) => materia.id)
+                                  .map(
+                                    (materia) =>
+                                      `${materia.id} / 保存等级 ${materia.grade}`,
+                                  )
+                                  .join(' / ') || '无'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

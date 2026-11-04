@@ -1,46 +1,15 @@
 import type { DatDecodeResult } from './types.ts';
+import {
+  describeHotbarCommand,
+  hotbarTypes,
+  gameName,
+  nameCatalog,
+} from './game-data.ts';
 
 // Field meanings: FFXIVClientStructs b72bc1f73, UI/Misc/
 // RaptureHotbarModule.HotbarSlotType, RaptureGearsetModule and AddonConfig.
 // Disk offsets below were independently checked against both supplied characters.
-const hotbarTypes = [
-  'Empty',
-  'Action',
-  'Item',
-  'InventoryItem',
-  'EventItem',
-  'KeyItem',
-  'Emote',
-  'Macro',
-  'Marker',
-  'CraftAction',
-  'GeneralAction',
-  'BuddyAction',
-  'MainCommand',
-  'Companion',
-  'Crystal',
-  'GearSet',
-  'PetAction',
-  'Mount',
-  'FieldMarker',
-  'ClassJob',
-  'Recipe',
-  'ChocoboRaceAbility',
-  'ChocoboRaceItem',
-  'Unknown23',
-  'ExtraCommand',
-  'PvPQuickChat',
-  'PvPCombo',
-  'BgcArmyAction',
-  'Unknown28',
-  'PerformanceInstrument',
-  'McGuffin',
-  'Ornament',
-  'LostFindsItem',
-  'Glasses',
-  'PhantomAction',
-  'QuickPanel',
-];
+
 const equipmentSlots = [
   'MainHand',
   'OffHand',
@@ -138,7 +107,40 @@ export function decodeHotbar(
       commandType,
       commandTypeName: hotbarTypes[commandType] ?? 'Unknown',
       commandId,
+      ...describeHotbarCommand(
+        hotbarTypes[commandType] ?? 'Unknown',
+        commandId,
+      ),
     });
+  }
+  const groupNames: Record<number, string | null> = Object.fromEntries(
+    [...groups]
+      .filter((id) => id > 0 && id < 64)
+      .map((id) => [id, gameName('ClassJob', id)]),
+  );
+  const groupJobHints: Record<
+    number,
+    { classJobId: number; matchingActions: number; basis: string }
+  > = {};
+  for (const groupId of groups) {
+    if (groupId < 64) continue;
+    const jobs = new Map<number, number>();
+    for (const slot of slots) {
+      if (slot.groupId !== groupId || slot.commandTypeName !== 'Action')
+        continue;
+      const job = Number(gameName('ActionClassJob', slot.commandId));
+      if (job > 0) jobs.set(job, (jobs.get(job) ?? 0) + 1);
+    }
+    if (jobs.size === 1) {
+      const [job, count] = [...jobs][0];
+      groupNames[groupId] = `${gameName('ClassJob', job) ?? job}（技能匹配）`;
+      groupJobHints[groupId] = {
+        classJobId: job,
+        matchingActions: count,
+        basis:
+          '此组所有带明确职业引用的技能均指向同一 ClassJob；这是内容匹配，不宣称执行了客户端的存储索引转换。',
+      };
+    }
   }
   return {
     status: unknownTypes.size ? 'partial' : 'decoded',
@@ -147,6 +149,9 @@ export function decodeHotbar(
       slotCount: slots.length,
       nonemptySlotCount: slots.filter((slot) => slot.commandType !== 0).length,
       groupIds: [...groups].sort((a, b) => a - b),
+      groupNames,
+      groupJobHints,
+      nameCatalog,
       indexConvention:
         'barIndex and slotIndex are zero-based; groupId is the stored byte, not a runtime array index',
       groupMappingEvidence:
@@ -156,6 +161,26 @@ export function decodeHotbar(
     warnings: [...unknownTypes].map(
       (type) => `Unknown hotbar command type ${type}`,
     ),
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'slots[].groupId',
+        'slots[].barIndex',
+        'slots[].slotIndex',
+        'slots[].commandType',
+        'slots[].commandId',
+        'slots[].commandTypeName (defined enum values)',
+      ],
+      candidateFields: [
+        'slots[].groupKindCandidate',
+        'slots[].classJobIdCandidate',
+      ],
+      unknownFields: [...unknownTypes].map((type) => ({
+        field: `slots[].commandType ${type}`,
+        reason: '存储类型字节可读取，但当前源码枚举未定义该类型。',
+        kind: 'meaning',
+      })),
+    },
   };
 }
 
@@ -224,6 +249,7 @@ export function decodeGearset(
     records.push({
       offset,
       recordIndex,
+      isSavedGearsetSlot: recordIndex < 100,
       id,
       name,
       nameBytesHex: nameBytes.toString('hex'),
@@ -232,6 +258,8 @@ export function decodeGearset(
       unknownByte33: record[0x33],
       itemLevel: record.readInt16LE(0x34),
       bannerIndexPlusOne: record[0x36],
+      bannerIndex: record[0x36] === 0 ? null : record[0x36] - 1,
+      hasLinkedBanner: record[0x36] !== 0,
       flags,
       exists: !!(flags & 1),
       mainHandMissing: !!(flags & 4),
@@ -250,7 +278,69 @@ export function decodeGearset(
       recordSize: stride,
       recordCount: records.length,
       existingRecordCount: records.filter((record) => record.exists).length,
+      savedSlotCount: Math.min(100, records.length),
+      auxiliaryRecordCount: Math.max(0, records.length - 100),
       records,
+    },
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'records[].id',
+        'records[].name',
+        'records[].classJobId',
+        'records[].glamourSetLinkRaw',
+        'records[].itemLevel',
+        'records[].bannerIndex',
+        'records[].hasLinkedBanner',
+        'records[].flags (known source bits)',
+        'records[].items[].itemId',
+        'records[].items[].glamourId',
+        'records[].items[].stainIds',
+        'records[].items[].materia',
+        'records[].items[].flags (known source bits)',
+        'records[].glassesIds',
+      ],
+      candidateFields: [],
+      unknownFields: [
+        {
+          field: 'metadataHex',
+          reason:
+            '前4字节的存储边界已确认，但未找到它们与运行时字段绑定的实现。',
+          kind: 'meaning',
+        },
+        ...(records.length > 100
+          ? [
+              {
+                field: 'records[100..]',
+                reason:
+                  '运行时源码仅定义100个用户套装槽；附加记录可按相同布局读取，但其用途未确认，不作为可用套装。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
+        {
+          field: 'records[].unknownByte33',
+          reason: '结构中未命名的单字节，保留原值。',
+          kind: 'storage',
+        },
+        {
+          field: 'records[].items[].unknownTailHex',
+          reason: '每件装备记录末尾2字节未命名，保留原值。',
+          kind: 'storage',
+        },
+        ...(records.some(
+          (r) => r.unknownFlags || r.items.some((item) => item.unknownFlags),
+        )
+          ? [
+              {
+                field:
+                  'records[].unknownFlags / records[].items[].unknownFlags',
+                reason: '存在源码枚举未定义的旗标位，已与已知旗标分开保留。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
+      ],
     },
     warnings,
   };
@@ -406,6 +496,42 @@ export function decodeAddon(payload: Buffer, version: number): DatDecodeResult {
       'Coordinates, scale, dimensions, hashes and raw flags are decoded; undocumented header/tail fields retain raw bytes.',
       'Addon name lookup covers names explicitly annotated in the pinned structure source; unmatched hashes remain null.',
     ],
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'datasets[].name',
+        'datasets[].currentLayout',
+        'datasets[].entries[].addonNameHash',
+        'datasets[].entries[].x',
+        'datasets[].entries[].y',
+        'datasets[].entries[].scale',
+        'datasets[].entries[].width',
+        'datasets[].entries[].height',
+        'datasets[].entries[].alpha',
+        'datasets[].layouts[].entries',
+      ],
+      candidateFields: ['datasets[].layouts[].nameCandidate'],
+      unknownFields: [
+        {
+          field: 'entries[].elementFlags',
+          reason:
+            '该值会随界面元素表示热键栏形状或职业量谱模式等，当前源码未定义各元素的位掩码。',
+          kind: 'meaning',
+        },
+        {
+          field: 'entries[].byteValue1 / byteValue2 / byteValue3',
+          reason:
+            '当前源码仅对可见/启用用途加问号注释，不能将它们一律当成布尔开关。',
+          kind: 'meaning',
+        },
+        {
+          field:
+            'containerHeaderHex / datasets[].headerHex / layouts[].headerHex / unknownTailHex',
+          reason: '容器范围和偏移已核验；其余未使用的头尾字节原样保留。',
+          kind: 'storage',
+        },
+      ],
+    },
   };
 }
 

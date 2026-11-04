@@ -133,9 +133,52 @@ export function decodeAcquaintance(
           confidence: 'inferred',
         }
       : null;
+  const metadataCount = metadataFields[0]?.hex;
+  const metadataRecordCount =
+    metadataCount && /^[0-9a-f]{4}$/i.test(metadataCount)
+      ? parseInt(metadataCount, 16)
+      : null;
+  const metadataShapeMatches =
+    metadataRecordCount !== null &&
+    metadataFields.length === 4 + metadataRecordCount * 2 &&
+    /^[0-9a-f]{4}$/i.test(metadataFields[1]?.hex ?? '') &&
+    metadataFields
+      .slice(2)
+      .every((field) => /^[0-9a-f]{6}$/i.test(field.hex ?? ''));
+  const metadataBlock = metadataShapeMatches
+    ? {
+        recordCount: metadataRecordCount,
+        headerFieldOffsets: metadataFields
+          .slice(0, 4)
+          .map((field) => field.offset),
+        integer64: BigInt(
+          `0x${metadataFields
+            .slice(1, 4)
+            .map((field) => field.hex)
+            .join('')}`,
+        ).toString(),
+        entries: Array.from(
+          { length: metadataRecordCount },
+          (_, recordIndex) => ({
+            index: recordIndex,
+            fieldOffsets: metadataFields
+              .slice(4 + recordIndex * 2, 6 + recordIndex * 2)
+              .map((field) => field.offset),
+            firstValue: parseInt(
+              metadataFields[4 + recordIndex * 2].hex ?? '0',
+              16,
+            ),
+            secondValue: parseInt(
+              metadataFields[5 + recordIndex * 2].hex ?? '0',
+              16,
+            ),
+          }),
+        ),
+      }
+    : null;
   if (sections.length) {
     warnings.push(
-      'T/C/M fields are preserved verbatim; their identifier/flag semantics are not confirmed.',
+      'Contact names and worlds are decoded. T flag bits, the C identifier binding, and the purpose of numeric M records still need confirmation; exact values and boundaries are retained.',
     );
   }
   return {
@@ -146,7 +189,54 @@ export function decodeAcquaintance(
       additionalFields,
       metadataFields,
       timestampCandidate,
+      metadataBlock,
       sections,
+    },
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'contacts[].name',
+        'contacts[].worldName',
+        'contacts[].worldId',
+        'contacts[].fields',
+        ...(metadataBlock
+          ? [
+              'metadataBlock.recordCount',
+              'metadataBlock.entries[].firstValue',
+              'metadataBlock.entries[].secondValue',
+            ]
+          : []),
+      ],
+      candidateFields: sections.length
+        ? [
+            'contacts[].inferred.contentIdCandidate',
+            'contacts[].inferred.flagsCandidate',
+            'timestampCandidate',
+          ]
+        : [],
+      unknownFields: sections.length
+        ? [
+            {
+              field: 'contacts[].unknownT',
+              reason:
+                '字段可精确解码为16位值，但每个位的业务含义尚未由读取函数或单项差分证实。',
+              kind: 'meaning',
+            },
+            {
+              field: 'contacts[].unknownCParts',
+              reason:
+                '4/6/6十六进制分片可精确拼接64位标识；源码同时含ContentId和AccountId，需进一步确认序列化绑定。',
+              kind: 'reference',
+            },
+            {
+              field: 'metadataBlock',
+              reason: metadataBlock
+                ? '已核实数量与两列数值的记录边界；这组数值的业务用途及64位头字段的时间语义尚未确认。'
+                : '附加M字段未匹配已知的数量/64位头/两列记录格式，原始字段完整保留。',
+              kind: 'meaning',
+            },
+          ]
+        : [],
     },
     warnings,
   };
@@ -187,6 +277,25 @@ export function decodeGoldSaucer(
       alignmentHex: padding.toString('hex'),
       unseenTripleTriadCardIds: u16s(payload.subarray(628, 648)),
       trailingHex: trailing.toString('hex'),
+    },
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'decks[].name',
+        'decks[].cardIds',
+        'minionCompanionIds',
+        'unseenTripleTriadCardIds',
+      ],
+      candidateFields: [],
+      unknownFields: trailing.length
+        ? [
+            {
+              field: 'trailingHex',
+              reason: '已知648字节配置之后仍有额外字节，保留原值。',
+              kind: 'storage',
+            },
+          ]
+        : [],
     },
     warnings,
   };
@@ -263,7 +372,18 @@ export function decodeItemOrder(
         page: field.bytes.readUInt16LE(2),
       };
     });
-    return { name, retainerId, offset: countField.offset, count, slots };
+    return {
+      name,
+      retainerId,
+      offset: countField.offset,
+      count,
+      slots,
+      locations: slots.map((entry) => ({
+        displayPosition: entry.displayIndex + 1,
+        sourcePage: entry.page + 1,
+        sourceSlot: entry.slot + 1,
+      })),
+    };
   }
   const formatVersion = take('V', 4).bytes.readUInt32LE();
   if (formatVersion !== version)
@@ -287,6 +407,27 @@ export function decodeItemOrder(
   return {
     status: warnings.length ? 'partial' : 'decoded',
     data: { formatVersion, containers, retainers, additionalFields },
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'formatVersion',
+        'containers[].slots[].displayIndex',
+        'containers[].slots[].slot',
+        'containers[].slots[].page',
+        'retainers[].retainerId',
+        'retainers[].slots',
+      ],
+      candidateFields: [],
+      unknownFields: additionalFields.length
+        ? [
+            {
+              field: 'additionalFields',
+              reason: '已知排序器之后有附加字段，尚未对应运行时业务字段。',
+              kind: 'meaning',
+            },
+          ]
+        : [],
+    },
     warnings,
   };
 }
@@ -402,9 +543,57 @@ export function decodeItemFinder(
         bitCount: cabinetBitCount,
         unlockWords: u32s(cabinet),
         setBitIndices: cabinetSetBitIndices,
+        cabinetIds: cabinetSetBitIndices,
       },
       additionalFields,
-      note: 'Client-side item-search cache, not authoritative server inventory. Cabinet bit indices are not necessarily Item sheet row IDs.',
+      note: 'Client-side item-search cache, not authoritative server inventory. Cabinet bit indices are Cabinet row IDs: resolve Cabinet.Item to the Item sheet rather than treating Cabinet IDs as Item IDs.',
+    },
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'characterContentId',
+        'retainers[].retainerId',
+        'retainers[].equippedItemIds',
+        'retainers[].itemIds',
+        'retainers[].itemCounts',
+        'retainers[].crystalQuantities',
+        'saddleBag.itemIds',
+        'saddleBag.itemCounts',
+        'premiumSaddleBag.itemIds',
+        'premiumSaddleBag.itemCounts',
+        'glamourDresser.itemIds',
+        'cabinet.cabinetIds',
+      ],
+      candidateFields: [],
+      unknownFields: [
+        {
+          field: 'glamourDresser.itemSetUnlockBits',
+          reason:
+            '已完整读取每项16位状态值；各位的业务含义未在当前结构源码定义。',
+          kind: 'meaning',
+        },
+        {
+          field: 'retainers[].alignmentHex',
+          reason:
+            '每条雇员记录末尾2字节保留；不影响已读取的物品ID、数量及水晶数量。',
+          kind: 'storage',
+        },
+        {
+          field: 'retainers[].crystalQuantities[] -> crystal ItemId',
+          reason:
+            '18个数量已由结构源码确认；槽位到水晶物品编号的映射缺少独立的正值样本或读函数验证。',
+          kind: 'reference',
+        },
+        ...(additionalFields.length
+          ? [
+              {
+                field: 'additionalFields',
+                reason: '存在已知缓存字段之后的附加字段。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
+      ],
     },
     warnings,
   };
@@ -425,26 +614,77 @@ export function decodeLogFilter(
     const length = payload.readUInt32LE(offset + 4);
     if (offset + 16 + length > payload.length)
       throw new Error(`Truncated log filter values at ${offset}`);
+    const filterStates = Array.from(
+      payload.subarray(offset + 16, offset + 16 + length),
+    );
     groups.push({
       offset,
       index,
       // MoreMessageFilterPresets.cs:221-231 and :237-260 in the local
       // DailyRoutines.ModulesPublic repository selects one of four chat tabs
-      // and copies its filter data. This establishes tab identity, but does
-      // not establish a LogKind-to-filter-index mapping or state meanings.
+      // and copies its filter data. Filter positions are LogFilter RowIds,
+      // NOT LogKind ids: all 234 active rows in the supplied second tab match
+      // LogFilter.Preset & 2 exactly. The other three tabs differ by only one
+      // user-selected category. 0/1 therefore mean hidden/displayed. State 2
+      // occurs only at unused/deleted/category-zero rows in initialized tabs.
       chatTab: index < 4 ? `Chat tab ${index + 1}` : null,
       version: groupVersion,
       unknownHeaderHex: payload
         .subarray(offset + 8, offset + 16)
         .toString('hex'),
-      filterStates: Array.from(
-        payload.subarray(offset + 16, offset + 16 + length),
-      ),
+      filterStates,
+      filters: filterStates.map((rawState, filterId) => ({
+        filterId,
+        rawState,
+        enabled: rawState === 1 ? true : rawState === 0 ? false : null,
+        stateLabel:
+          rawState === 1
+            ? '显示'
+            : rawState === 0
+              ? '隐藏'
+              : rawState === 2
+                ? '保留项'
+                : `未知状态 ${rawState}`,
+      })),
     });
     offset += 16 + length;
   }
   warnings.push(
-    'All filter-state bytes are exposed by index; category names and the meanings of state values 0/1/2 are not verified.',
+    'LogFilter row IDs identify categories; state 0 hides and state 1 displays. State 2 is retained without interpreting it as an enabled switch.',
   );
-  return { status: 'partial', data: { groups }, warnings };
+  return {
+    status: 'partial',
+    data: { groups },
+    warnings,
+    coverage: {
+      structureComplete: true,
+      knownFields: [
+        'groups[].index',
+        'groups[].chatTab',
+        'groups[].filters[].filterId',
+        'groups[].filters[].rawState',
+        'groups[].filters[].enabled (states 0/1)',
+      ],
+      candidateFields: [],
+      unknownFields: [
+        {
+          field: 'groups[].filters state 2',
+          reason:
+            '所有样本的已初始化页中，2只出现在无效/删除/保留类别位置；不把它强行解释为显示或隐藏。',
+          kind: 'storage',
+        },
+        ...groups
+          .filter((group) =>
+            Array.from(group.filterStates as number[]).some(
+              (state) => state > 2,
+            ),
+          )
+          .map((group) => ({
+            field: `groups[${group.index}].filters`,
+            reason: '包含0/1/2之外的状态值，原值保留。',
+            kind: 'meaning' as const,
+          })),
+      ],
+    },
+  };
 }

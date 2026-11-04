@@ -64,6 +64,40 @@ export function decodeRemainingUiSegment(
       completePartition:
         tailOffset + data.subarray(tailOffset).length === data.length,
       note: 'The observed record includes u32=3 at +0, u32=0xFFFFFFFF at +8, float32=1.0 at +16, and u32=28 at +40. These values do not establish type, colour, scale or font meanings.',
+      coverage: {
+        structureComplete: true,
+        knownFields: [
+          'recordCount',
+          'recordSize',
+          'records.rawHex',
+          'records.unknownU32',
+          'trailingU32Array.values',
+        ],
+        candidateFields: ['records.floatCandidateAt16'],
+        unknownFields: [
+          {
+            field: 'records.unknownU32[0..12]',
+            reason:
+              '52字节重复记录的边界已核对，但13个数值的业务名称尚无源码定义或有效变化样本。',
+            kind: 'meaning',
+          },
+          {
+            field: 'trailingU32Array',
+            reason: '全部样本均为FFFFFFFF，无法确定是索引、顺序还是哨兵。',
+            kind: 'meaning',
+          },
+          {
+            field: 'prefix',
+            reason: '328字节前区在全部样本中全零，用途未知。',
+            kind: 'storage',
+          },
+          {
+            field: 'suffix',
+            reason: '6428字节尾区在全部样本中全零，用途未知。',
+            kind: 'storage',
+          },
+        ],
+      },
     };
   }
   if (id === 7 && version === 400 && data.length === 66) {
@@ -88,6 +122,25 @@ export function decodeRemainingUiSegment(
       })),
       completePartition: true,
       note: 'In the six supplied snapshots the first 16 bytes match, changes occur only at offsets 16..37, and offsets 38..65 are zero. The 50 byte values are not asserted to be per-job entries or flags.',
+      coverage: {
+        structureComplete: true,
+        knownFields: ['byteValues.offset', 'byteValues.value'],
+        candidateFields: [],
+        unknownFields: [
+          {
+            field: 'prefix',
+            reason:
+              '16字节前区可读出数值，但布局含义未在当前PvpSetModule定义。',
+            kind: 'meaning',
+          },
+          {
+            field: 'byteValues',
+            reason:
+              '当前源码旧PvP字段已注释，50个字节不能确认是技能、职业条目还是旗标。',
+            kind: 'meaning',
+          },
+        ],
+      },
     };
   }
   return null;

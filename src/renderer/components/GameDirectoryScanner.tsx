@@ -7,6 +7,7 @@ import type {
   DecodedFileSummary,
 } from '../../shared/types';
 import DecodedContent from './DecodedContent';
+import DecodeCoverage from './DecodeCoverage';
 
 const statusNames = {
   decoded: '已解析',
@@ -130,7 +131,9 @@ function FileViewer({ file }: { file: DecodedFileSummary }) {
             </div>
           ) : (
             <>
-              {detail.summary.status === 'partial' ? (
+              {detail.coverage ? (
+                <DecodeCoverage coverage={detail.coverage} />
+              ) : detail.summary.status === 'partial' ? (
                 <p className="partial-note">
                   已读取记录；部分字段含义尚未确认，候选解释与原始值已保留。
                 </p>

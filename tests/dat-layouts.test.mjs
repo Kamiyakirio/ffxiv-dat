@@ -23,6 +23,9 @@ test('HOTBAR reads stored coordinates and command types from disk records', () =
     commandType: 7,
     commandTypeName: 'Macro',
     commandId: 0x1234,
+    commandTypeLabel: '宏',
+    commandName: null,
+    nameSource: null,
   });
 });
 
