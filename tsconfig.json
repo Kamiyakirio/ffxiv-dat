@@ -6,6 +6,8 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "noImplicitAny": true,
