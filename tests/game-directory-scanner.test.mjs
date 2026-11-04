@@ -28,18 +28,26 @@ test('finds the exact three-folder structure on a later disk', async (t) => {
   assert.equal(await findGameDirectory([firstDisk, secondDisk]), target);
 });
 
-test('does not match missing, partial or noncontiguous parent folders', async (t) => {
+test('does not match missing, partial or noncontiguous My Games folders', async (t) => {
   const root = await fixture(t);
   for (const directories of [
-    ['My Games', folderName],
-    ['othergame', 'My Games', folderName],
-    ['game', 'extra', 'My Games', folderName],
+    ['Games', folderName],
+    ['My Games backup', folderName],
+    ['game', 'My Games', 'extra', folderName],
     ['game', 'My Games', `${folderName} backup`],
   ]) {
     await mkdir(path.join(root, ...directories), { recursive: true });
   }
 
   assert.equal(await findGameDirectory([root]), null);
+});
+
+test('finds Downloads/My Games without requiring a game parent directory', async (t) => {
+  const root = await fixture(t);
+  const target = path.join(root, 'Downloads', 'My Games', folderName);
+  await mkdir(target, { recursive: true });
+  assert.equal(await findGameDirectory([root]), target);
+  assert.equal(await findGameDirectory([target]), target);
 });
 
 test('matches Windows folder names regardless of case', async (t) => {
