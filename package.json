@@ -21,7 +21,7 @@
     "lint:fix": "eslint . --fix && prettier --write .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --import tsx --test tests/*.test.mjs tests/*.test.tsx",
+    "test": "node --import tsx --test tests/*.test.ts tests/*.test.tsx",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

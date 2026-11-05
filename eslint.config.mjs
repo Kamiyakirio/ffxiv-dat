@@ -14,7 +14,7 @@ export default defineConfig(
     files: [
       '*.{js,mjs,cjs,ts,mts,cts}',
       'src/{main,preload}/**/*.ts',
-      'tests/**/*.{mjs,ts,tsx}',
+      'tests/**/*.{ts,tsx}',
     ],
     languageOptions: {
       globals: globals.node,
