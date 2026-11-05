@@ -16,6 +16,10 @@ test('HOTBAR reads stored coordinates and command types from disk records', () =
   assert.deepEqual(result.data.slots[0], {
     offset: 0,
     groupId: 64,
+    savedHotbarIndex: 46,
+    groupKind: 'pvpShared',
+    classJobId: 0,
+    isPvp: true,
     groupKindCandidate: 'pvpStoredGroup',
     classJobIdCandidate: null,
     barIndex: 17,

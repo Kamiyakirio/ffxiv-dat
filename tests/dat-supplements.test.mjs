@@ -22,8 +22,8 @@ test('XBM pet settings align sizes by list position and bitmaps by pet ID, witho
     field('C', [2]),
     field('I', [20, 3]),
     field('S', [2, 0]),
-    field('N', [4, 0, 8]),
-    field('M', [0, 0, 8]),
+    field('N', [4, 0, 8, 0, 0, 0, 0]),
+    field('M', [0, 0, 8, 0, 0, 0, 0]),
   ]);
   const decoded = decodeUiRecords(43, 0, data);
   assert.deepEqual(
@@ -40,7 +40,8 @@ test('XBM pet settings align sizes by list position and bitmaps by pet ID, witho
   );
   assert.deepEqual(decoded.seenPetIds, [3, 20]);
   assert.deepEqual(decoded.alternativeMiragePetIds, [20]);
-  assert(decoded.coverage.candidateFields.includes('petSettings.mirage'));
+  assert(decoded.coverage.knownFields.includes('petSettings.mirage'));
+  assert.equal(decoded.coverage.candidateFields.length, 0);
   assert.equal(decodeUiRecords(43, 1, data), null);
   assert.equal(decodeUiRecords(43, 0, field('C', [3])), null);
 });
@@ -362,7 +363,7 @@ test('EMJ confirms native settings field bindings while retaining every raw byte
   );
 });
 
-test('EMJ statistics candidates use the documented history stride and do not guess the other block identities', () => {
+test('EMJ preserves history aliases and decodes NPC win counters without guessing malformed blocks', () => {
   const stats = Buffer.alloc(80);
   stats.writeInt32LE(-7);
   stats.writeInt32LE(1700000000, 4);
@@ -386,7 +387,13 @@ test('EMJ statistics candidates use the documented history stride and do not gue
   assert.equal(values.historyValues[0], 1234);
   assert.equal(values.historyValues[15], -99);
   assert.equal(values.unknownGapHex, '4433221100000000');
-  for (const key of [1, 3, 4]) {
+  assert.deepEqual(
+    result.chunks
+      .find((chunk) => chunk.key === 1)
+      .data.npcWins.map((row) => row.winCount),
+    [0, 0, 0],
+  );
+  for (const key of [3, 4]) {
     const chunk = result.chunks.find((chunk) => chunk.key === key);
     assert.equal(chunk.data, undefined);
     assert(
@@ -498,11 +505,27 @@ test('FLAGS names documented UI indices after native serialization confirms the 
   );
   assert(
     result.coverage.unknownFields.some(
-      (entry) => entry.field === 'uiFlags.unlistedIndices',
+      (entry) => entry.field === 'unmappedUiFlags',
     ),
   );
   bytes.writeUInt32LE(255, 128 + 16 * 4);
   const invalid = decodeAdditionalUiSegment(2, 100, bytes);
   assert.equal(invalid.namedFlags.actionsAndTraitsCompactView, null);
   assert.equal(invalid.uiFlags[16], 255);
+});
+
+test('XBM reserved bitmap bits do not invent pets outside native IDs or the saved list', () => {
+  const data = Buffer.concat([
+    field('C', [1]),
+    field('I', [50]),
+    field('S', [1]),
+    field('N', [0, 0, 0, 0, 0, 0, 255]),
+    field('M', [0, 0, 0, 0, 0, 0, 254]),
+  ]);
+  const decoded = decodeUiRecords(43, 0, data);
+  assert.deepEqual(decoded.seenPetIds, [50]);
+  assert.deepEqual(decoded.alternativeMiragePetIds, [50]);
+  assert.equal(decoded.petSettings[0].sizeName, '中型');
+  assert.equal(decoded.reservedSeenBitsHex, '000000000000fc');
+  assert.equal(decoded.seenStorageHex, '000000000000ff');
 });

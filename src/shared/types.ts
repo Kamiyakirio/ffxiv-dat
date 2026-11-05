@@ -2,6 +2,9 @@ export interface CharacterDirectory {
   path: string;
   contentId: string;
   names: string[];
+  homeWorldId?: number | null;
+  homeWorldName?: string | null;
+  profileUpdatedAtUnix?: number | null;
   fileCount: number;
 }
 

@@ -4,6 +4,17 @@ import type { DecodeCoverage } from '../../../shared/types.ts';
 // CN ffxiv_dx11.exe SHA-256 958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9.
 // Container writer 0x1407fab70; name setter 0x1407fb650; 64-byte contact
 // setters 0x1407fc720..0x1407fca70. Vector writers: 0x1407fd1a0 / 0x1407ff090.
+// Blacklist: InfoProxyBlacklist 0x1409685f0 consumes module+0x1198;
+// 0x140968a5a selects AccountIdMap(+0x19f8)/ContentIdMap(+0x1a08).
+// 0x140968ccc passes server flag bit1 to record+0x10; writer 0x1407fd333
+// packs that bool into F. R is the server record key; I is a legacy identity
+// used when R=0 (0x1407fe415..452), not necessarily a populated account ID.
+// Group labels: 0x1407fb5f0 default Addon1668(index+1), 0x1407fb650
+// updates icon labels Addon1661..1667; AgentFriendlist event 0x14051c2d5.
+// Name caches: 0x1407fe540 inserts 8 name32/contentId64/world16 records;
+// party caller 0x140d1deee reads CrossRealmMember.ContentId+0x10 and World+0x2c.
+// 0x1407fe7b0 inserts the same 48-byte layout at module+0x1340 (cap200);
+// InfoProxyFriendList 0x140969340 supplies CharacterData.ContentId/Name.
 // These are static serialization observations, not observed client execution.
 interface TaggedField {
   tag: string;
@@ -124,9 +135,29 @@ function decodeList(
         ? { accountId: identity, worldId: world }
         : {
             identityIdRaw: identity,
+            legacyIdentityId: identity,
             worldIdRaw: world,
+            worldId: world,
             recordIdRaw: indices!.readUInt16LE(index * 2),
+            serverRecordId: indices!.readUInt16LE(index * 2),
             flagRaw: (bitmap![index >>> 3] & (1 << (index & 7))) !== 0,
+            isAccountBlock: (bitmap![index >>> 3] & (1 << (index & 7))) !== 0,
+            identityKind:
+              (bitmap![index >>> 3] & (1 << (index & 7))) !== 0
+                ? 'account'
+                : 'content',
+            accountId:
+              identity !== '0' &&
+              indices!.readUInt16LE(index * 2) === 0 &&
+              (bitmap![index >>> 3] & (1 << (index & 7))) !== 0
+                ? identity
+                : null,
+            contentId:
+              identity !== '0' &&
+              indices!.readUInt16LE(index * 2) === 0 &&
+              (bitmap![index >>> 3] & (1 << (index & 7))) === 0
+                ? identity
+                : null,
           }),
     };
   });
@@ -156,13 +187,16 @@ function decodeList(
       'muteList.entries.comment',
     );
   else
-    unknown.push({
-      field: 'blocks[id=4].entries.identityIdRaw / recordIdRaw / flagRaw',
-      reason:
-        '向量分列序列化已核实，身份值、记录键和布尔位按原类型解码；列表业务类别及标志用途尚未对应，不标成好友或黑名单。',
-      kind: 'meaning',
-    });
+    known.push(
+      'blacklist.entries.serverRecordId',
+      'blacklist.entries.isAccountBlock',
+      'blacklist.entries.identityKind',
+      'blacklist.entries.legacyIdentityId',
+      'blacklist.entries.accountId / contentId',
+      'blacklist.entries.worldId',
+    );
   return {
+    kind: id === 4 ? 'blacklist' : 'mute-list',
     count,
     capacity: 200,
     textSlotByteLength: 32,
@@ -180,6 +214,62 @@ function decodeList(
       commentsHex: comments.toString('hex'),
       ...(indices ? { recordIdsHex: indices.toString('hex') } : {}),
     },
+  };
+}
+
+function decodeNameCache(
+  body: Buffer,
+  sourceOffset: number,
+  capacity: number,
+  unknown: Unknown[],
+  known: string[],
+  id: number,
+) {
+  const declaredCountRaw = body.readUInt32LE(),
+    nativeCount = declaredCountRaw <= capacity ? declaredCountRaw : 0;
+  if (declaredCountRaw > capacity)
+    unknown.push({
+      field: `blocks[id=${id}].declaredCountRaw`,
+      reason: `数量${declaredCountRaw}超出原生容量${capacity}，客户端将活动数量重置为0；全部存储槽位仍保留。`,
+      kind: 'meaning',
+    });
+  const slots = Array.from({ length: capacity }, (_, index) => {
+    const offset = 8 + index * 48,
+      record = body.subarray(offset, offset + 48),
+      name = cstring(record.subarray(0, 32));
+    if (index < nativeCount && (name.value === null || !name.nulTerminated))
+      unknown.push({
+        field: `blocks[id=${id}].entries[${index}].name`,
+        reason: '名称不是完整的NUL终止UTF-8字符串，保留原始32字节。',
+        kind: 'storage',
+      });
+    return {
+      index,
+      offset: sourceOffset + offset,
+      isStoredEntry: index < nativeCount,
+      name: name.value,
+      contentId: record.readBigUInt64LE(32).toString(),
+      worldId: record.readUInt16LE(40),
+      nameStorageHex: name.rawHex,
+      reservedTailHex: record.subarray(42).toString('hex'),
+      rawHex: record.toString('hex'),
+    };
+  });
+  known.push(
+    `blocks[id=${id}].nativeCount`,
+    `blocks[id=${id}].entries.name`,
+    `blocks[id=${id}].entries.contentId`,
+    `blocks[id=${id}].entries.worldId`,
+  );
+  return {
+    kind: id === 5 ? 'party-character-cache' : 'character-name-cache',
+    declaredCountRaw,
+    nativeCount,
+    capacity,
+    recordSize: 48,
+    headerReservedHex: body.subarray(4, 8).toString('hex'),
+    entries: slots.slice(0, nativeCount),
+    slots,
   };
 }
 
@@ -278,6 +368,8 @@ export function decodeNativeSocial(
               });
             return {
               index: slot,
+              groupIndex: slot + 1,
+              iconAddonId: 1661 + slot,
               offset: offset + 16 + slot * 64,
               name: text.value,
               byteLength: text.byteLength,
@@ -285,9 +377,14 @@ export function decodeNativeSocial(
               rawHex: text.rawHex,
             };
           });
-          block.data = { labels, slotByteLength: 64, nameCopyLimit: 45 };
+          block.data = {
+            kind: 'friend-group-names',
+            labels,
+            slotByteLength: 64,
+            nameCopyLimit: 45,
+          };
           known.push('blocks[id=0].labels.name', 'blocks[id=0].labels.offset');
-          candidates.push('groupLabelsCandidate business classification');
+          known.push('friendGroups.groupIndex', 'friendGroups.iconAddonId');
         } else if (id === 3) {
           const contacts = Array.from({ length: 50 }, (_, slot) => {
             const at = slot * 64,
@@ -305,50 +402,54 @@ export function decodeNativeSocial(
               offset: offset + 16 + at,
               name: text.value,
               nameStorageHex: text.rawHex,
+              contentId: identity,
               identityIdRaw: identity,
               contentIdCandidate: identity,
+              worldId: record.readUInt16LE(48),
               worldIdRaw: record.readUInt16LE(48),
+              classJobId: record.readUInt16LE(50),
+              additionalIdRaw: record.readBigUInt64LE(40).toString(),
+              contextValueRaw: record.readUInt32LE(52),
+              clientValueRaw: record.readUInt16LE(56),
+              reservedTailHex: record.subarray(58).toString('hex'),
               unknownAfterIdHex: record.subarray(40, 48).toString('hex'),
               unknownAfterWorldHex: record.subarray(50).toString('hex'),
               unknownAfterContentIdHex: record.subarray(40).toString('hex'),
               rawHex: record.toString('hex'),
             };
           });
-          block.data = { contacts, capacity: 50, recordSize: 64 };
+          block.data = {
+            kind: 'recent-contacts',
+            contacts,
+            capacity: 50,
+            recordSize: 64,
+          };
           known.push(
             'blocks[id=3].contacts.name',
             'blocks[id=3].contacts.identityIdRaw',
             'blocks[id=3].contacts.worldIdRaw',
+            'contactRecords.contentId',
+            'contactRecords.worldId',
+            'contactRecords.classJobId',
           );
-          candidates.push('contactRecordsCandidate.contentIdCandidate');
           unknown.push({
-            field: 'blocks[id=3].contacts identifiers / tail fields',
+            field:
+              'blocks[id=3].contacts.additionalIdRaw / contextValueRaw / clientValueRaw',
             reason:
-              '设置函数确认32字节名称、+32处64位身份值和+48处16位值；身份类型、列表类别和其余尾部数值尚未完全对应，原始字段保留。',
+              'AgentContactList(AgentId0x10c)与跨服队伍/队伍成员调用链确认名称、角色ContentId、关联服务器及职业；+40处64位值、+52处32位上下文及+56处16位客户端值的业务含义仍待核对。',
             kind: 'meaning',
           });
         } else if (id === 4 || id === 11)
           block.data = decodeList(id, body, offset + 16, unknown, known);
-        else {
-          const capacity = id === 5 ? 8 : 200,
-            rawCount = body.readUInt32LE();
-          block.data = {
-            declaredCountRaw: rawCount,
-            nativeCount: rawCount <= capacity ? rawCount : 0,
-            capacity,
-            rawHex: body.toString('hex'),
-          };
-          known.push(
-            `blocks[id=${id}].declaredCountRaw`,
-            `blocks[id=${id}].nativeCount`,
+        else if (id === 5 || id === 6)
+          block.data = decodeNameCache(
+            body,
+            offset + 16,
+            id === 5 ? 8 : 200,
+            unknown,
+            known,
+            id,
           );
-          unknown.push({
-            field: `blocks[id=${id}].data`,
-            reason:
-              '客户端整体复制此固定存储块，并把越界数量重置为0；块内其他业务字段尚未核实，未按名字推测好友或黑名单。',
-            kind: 'meaning',
-          });
-        }
       } catch (error) {
         block.parseError =
           error instanceof Error ? error.message : String(error);
@@ -398,10 +499,15 @@ export function decodeNativeSocial(
     headerPaddingHex: data.subarray(1, 4).toString('hex'),
     blocks,
     groupLabels,
+    friendGroups: groupLabels,
     contactRecords: contacts,
+    recentContacts: contacts,
     groupLabelsCandidate: groupLabels,
     contactRecordsCandidate: contacts,
     socialList: only(4),
+    blacklist: only(4),
+    partyMemberCache: only(5),
+    characterNameCache: only(6),
     muteList: only(11),
     remainingOffset: offset,
     remainingHex: remainder.toString('hex'),

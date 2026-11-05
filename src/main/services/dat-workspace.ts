@@ -17,6 +17,7 @@ import {
   gameName,
   itemName,
   linkHotbarReferences,
+  hotbarTypes,
   enrichDecodedData,
 } from './dat/game-data.ts';
 import { readableSections } from './dat/readable.ts';
@@ -236,6 +237,9 @@ export class DatWorkspace {
         path: characterPath,
         contentId: match[1].toUpperCase(),
         names: [],
+        homeWorldId: null,
+        homeWorldName: null,
+        profileUpdatedAtUnix: null,
         fileCount: (await datFiles(characterPath)).length,
       });
     }
@@ -261,6 +265,25 @@ export class DatWorkspace {
           !character.names.includes(result.name)
         )
           character.names.push(result.name);
+        if (
+          character &&
+          typeof result.worldId === 'number' &&
+          Number.isInteger(result.worldId) &&
+          result.worldId > 0 &&
+          (character.homeWorldId === null ||
+            (typeof result.recordUpdatedAtUnix === 'number' &&
+              result.recordUpdatedAtUnix >
+                (character.profileUpdatedAtUnix ?? -1)))
+        ) {
+          // CFGCPY setter 0x140150850 stores the player's HomeWorldId;
+          // pair it only with this full ContentId and prefer the newest cache.
+          character.homeWorldId = result.worldId;
+          character.homeWorldName = gameName('World', result.worldId);
+          character.profileUpdatedAtUnix =
+            typeof result.recordUpdatedAtUnix === 'number'
+              ? result.recordUpdatedAtUnix
+              : null;
+        }
       } catch {
         /* A damaged nickname cache must not hide the character. */
       }
@@ -471,6 +494,17 @@ export class DatWorkspace {
           : null;
         return Array.isArray(value) ? value : [];
       };
+      // Shared macros live outside the character folder. For an archive,
+      // use only its own MACROSYS member; never borrow another backup's data.
+      const sharedMacroFile = files.find(
+        (entry) =>
+          entry.name.toUpperCase() === 'MACROSYS.DAT' &&
+          entry.parentId === file.parentId &&
+          !entry.characterId,
+      );
+      const sharedMacros = sharedMacroFile
+        ? this.results.get(sharedMacroFile.id)?.data.macros
+        : [];
       if (
         file.name.toUpperCase() === 'HOTBAR.DAT' &&
         Array.isArray(detail.data.slots)
@@ -479,6 +513,7 @@ export class DatWorkspace {
           detail.data.slots,
           related('MACRO.DAT', 'macros'),
           related('GEARSET.DAT', 'records'),
+          Array.isArray(sharedMacros) ? sharedMacros : [],
         );
       }
       if (
@@ -492,12 +527,22 @@ export class DatWorkspace {
         for (const segment of detail.data.segments) {
           if (segment.id !== 41 || !Array.isArray(segment.data.panels))
             continue;
-          for (const panel of segment.data.panels)
+          for (const panel of segment.data.panels) {
+            const icon = {
+              commandTypeName: hotbarTypes[Number(panel.iconCommandType)],
+              commandId: Number(panel.iconCommandId),
+              commandName: null as string | null,
+              nameSource: null as string | null,
+            };
             linkHotbarReferences(
-              panel.slots,
+              [...panel.slots, icon],
               related('MACRO.DAT', 'macros'),
               related('GEARSET.DAT', 'records'),
+              Array.isArray(sharedMacros) ? sharedMacros : [],
             );
+            panel.iconCommandName = icon.commandName;
+            panel.iconNameSource = icon.nameSource;
+          }
         }
       }
     }

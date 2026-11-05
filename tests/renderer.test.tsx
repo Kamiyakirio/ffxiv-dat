@@ -373,7 +373,7 @@ test('scan failures allow manual selection and browser-only mode disables native
   render(<App />);
   await ui().findByRole('alert');
   fireEvent.click(ui().getAllByRole('button', { name: '选择文件夹' })[0]);
-  await ui().findByText('测试角色');
+  await ui().findByText('测试角色@未知服务器');
   assert.equal(api.choose.mock.callCount(), 1);
   cleanup();
   Reflect.deleteProperty(window, 'gameDirectory');
@@ -1121,4 +1121,141 @@ test('editor fields use shared columns while long text and key bindings retain f
     (view.getByLabelText('长备注') as HTMLInputElement).value,
     '示例',
   );
+});
+
+test('UISAVE category groups own full-width sections with independent compact grids', () => {
+  const names = [
+    'LETTER',
+    'RETTASK',
+    'FLAGS',
+    'RCFAV',
+    'UIDATA',
+    'TLPH',
+    'ITCC',
+    'PVPSET',
+    'EMTH',
+    'MNONLST',
+    'MUNTLST',
+    'EMJ',
+    'AOZNOTE',
+    'CWLS',
+    'ARCHVLST',
+    'GRPPOS',
+    'CRAFT',
+    'FMARKER',
+    'MYCNOT',
+    'ORNMLST',
+    'MYCITEM',
+    'GRPSTAMP',
+    'RTNR',
+    'BANNER',
+    'ADVNOTE',
+    'AKTKNOT',
+    'VVDNOTE',
+    'VVDACT',
+    'TOFU',
+    'FISHING',
+    'ACTION',
+    'TFILTER',
+    'READYC',
+    'PTRLST',
+    'CATSBM',
+    'DESCRI',
+    'MJICWSP',
+    'PERFORM',
+    'MKDSJOB',
+    'MKDLORE',
+    'MKDSJN',
+    'QPNL',
+    'GLASSES',
+    'XBMNOTE',
+    'XBM',
+  ];
+  const view = render(
+    <DecodedContent
+      detail={detail('UISAVE.DAT', {
+        segments: names.map((name, id) => ({
+          id,
+          name,
+          data: { empty: true },
+        })),
+      })}
+    />,
+  );
+  const groups = [
+    ...view.container.querySelectorAll('.category-groups > .navigation-group'),
+  ];
+  assert.equal(groups.length, 5);
+  assert.equal(
+    view.container.querySelectorAll('.category-navigation .record-link').length,
+    45,
+  );
+  assert(
+    groups.every(
+      (group) =>
+        group.querySelector(':scope > h3') &&
+        group.querySelector(':scope > .category-navigation'),
+    ),
+  );
+  assert.match(
+    view.container.querySelector('.record-count')?.textContent ?? '',
+    /45 个类别/,
+  );
+  const initialGroups = groups.map(
+    (group) => group.querySelector('h3')!.textContent,
+  );
+  fireEvent.change(view.getByLabelText('搜索配置类别'), {
+    target: { value: '设置' },
+  });
+  const filteredGroups = [
+    ...view.container.querySelectorAll(
+      '.category-groups > .navigation-group > h3',
+    ),
+  ].map((group) => group.textContent);
+  assert.deepEqual(
+    filteredGroups,
+    initialGroups.filter((group) => filteredGroups.includes(group)),
+  );
+  fireEvent.change(view.getByLabelText('搜索配置类别'), {
+    target: { value: '肖像' },
+  });
+  assert.equal(
+    view.container.querySelectorAll('.category-groups > .navigation-group')
+      .length,
+    1,
+  );
+  assert.equal(
+    view.container.querySelectorAll('.category-navigation .record-link').length,
+    1,
+  );
+  fireEvent.click(view.getByRole('button', { name: /^肖像/ }));
+  assert.equal(view.getByRole('heading', { level: 2 }).textContent, '肖像');
+  fireEvent.click(view.getByRole('button', { name: '返回UISAVE.DAT' }));
+  assert.equal(
+    (view.getByLabelText('搜索配置类别') as HTMLInputElement).value,
+    '肖像',
+  );
+});
+
+test('character IDs use name@world consistently and explicitly mark unknown servers', async () => {
+  const { api } = bridge();
+  const known = {
+    ...directory,
+    characters: [
+      {
+        ...directory.characters[0],
+        names: ['忏'],
+        homeWorldId: 1081,
+        homeWorldName: '神意之地',
+      },
+    ],
+  };
+  api.scan.mock.mockImplementation(async () => [known]);
+  await start();
+  assert(ui().getByRole('option', { name: '忏@神意之地' }));
+  assert.equal(ui().queryByRole('option', { name: /忏 · 123456/ }), null);
+  cleanup();
+  bridge();
+  await start();
+  assert(ui().getByRole('option', { name: '测试角色@未知服务器' }));
 });

@@ -32,12 +32,24 @@ export function decodeConfigCopy(bytes: Buffer): DatDecodeResult {
     worldBytes?.length === 2 &&
     contentIdHex !== null;
   return {
-    status: 'partial',
+    status:
+      formatMatches &&
+      timestampInteger !== null &&
+      timestampInteger < 253402300800n
+        ? 'decoded'
+        : 'partial',
     data: {
       name: names[0]?.text ?? null,
       worldId: worldBytes?.length === 2 ? worldBytes.readUInt16LE() : null,
       contentIdHex,
       contentId: contentIdHex ? BigInt(`0x${contentIdHex}`).toString() : null,
+      // Target setter0x140150850 (via140146e10) refreshes record+0 from
+      // server seconds0x140482820. Config save0x1407c78e0 refreshes it before
+      // writer0x140151070 serializes T from that field. Not a login time.
+      recordUpdatedAtUnix:
+        timestampInteger !== null && timestampInteger < 253402300800n
+          ? Number(timestampInteger)
+          : null,
       timestampInteger: timestampInteger?.toString() ?? null,
       timestampCandidate: timestamp,
       timestampIsoCandidate:
@@ -47,19 +59,30 @@ export function decodeConfigCopy(bytes: Buffer): DatDecodeResult {
       sections,
     },
     warnings: [
-      'Name/world/content ID fields are structurally decoded; the T value is preserved as an exact integer and its timestamp purpose remains inferred.',
+      'Native configuration-save flow refreshes T with server Unix seconds; it is the character configuration record update time. Raw integers and split fields remain preserved.',
     ],
     coverage: {
       structureComplete: true,
-      knownFields: ['name', 'worldId', 'contentIdHex', 'contentId', 'sections'],
-      candidateFields: ['timestampCandidate', 'timestampIsoCandidate'],
+      knownFields: [
+        'name',
+        'worldId',
+        'contentIdHex',
+        'contentId',
+        'recordUpdatedAtUnix',
+        'sections',
+      ],
+      candidateFields: [],
       unknownFields: [
-        {
-          field: 'timestampInteger',
-          reason:
-            'T分片的64位值已无损拼接，数值对应合理Unix时间，但它具体代表何种缓存时间尚未证实。',
-          kind: 'meaning',
-        },
+        ...(timestampInteger === null || timestampInteger >= 253402300800n
+          ? [
+              {
+                field: 'timestampInteger',
+                reason:
+                  '时间原值超出可显示的Unix秒数范围；保留完整64位原值，不伪造日期。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
         ...(!formatMatches
           ? [
               {

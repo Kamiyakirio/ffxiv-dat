@@ -104,9 +104,15 @@ export default function DecodedContent({
     : filtered.slice(page * pageSize, (page + 1) * pageSize);
   const groups = [
     ...new Set(
-      displayed.map((child) => (grouped ? (child.group ?? '其他配置') : '')),
+      (grouped ? children : displayed).map((child) =>
+        grouped ? (child.group ?? '其他配置') : '',
+      ),
     ),
-  ];
+  ].filter((group) =>
+    displayed.some(
+      (child) => (grouped ? (child.group ?? '其他配置') : '') === group,
+    ),
+  );
   const technicalOpen = technical === routeKey;
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
@@ -341,7 +347,7 @@ export default function DecodedContent({
                 <section key={group} className="navigation-group">
                   {group && <h3>{group}</h3>}
                   <div
-                    className={`navigation-list${compact ? ' compact-records' : ''}`}
+                    className={`navigation-list ${grouped ? 'category-navigation' : 'compact-records'}`}
                   >
                     {displayed
                       .filter(

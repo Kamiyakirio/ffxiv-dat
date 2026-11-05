@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { addonDisplayName } from './addon-names.ts';
 import type { EditableField, EditValue } from '../../../shared/types.ts';
 import { decodeDat } from './decoder.ts';
 import type { DecodedDat } from './decoder.ts';
@@ -171,9 +172,10 @@ function populate(editor: EditBuffer, decoded: DecodedDat) {
       ];
       for (const group of groups)
         for (const entry of group.entries) {
+          if (entry.isEmptyStorage === true) continue;
           const p = Number(entry.offset),
             k = `addon.${p}.`;
-          editor.group = `${d.name} / ${group.name} / ${entry.addonName ?? entry.addonNameHashHex}`;
+          editor.group = `${d.name} / ${group.name} / ${addonDisplayName(entry.addonName, entry.addonNameHashHex)}`;
           for (const [offset, label, key] of [
             [4, '横坐标', 'x'],
             [8, '纵坐标', 'y'],

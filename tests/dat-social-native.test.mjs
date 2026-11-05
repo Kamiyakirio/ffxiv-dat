@@ -128,7 +128,23 @@ test('UIDATA reads six framed blocks by declared count and does not interpret un
   assert.equal(result.blocks[4].data.nativeCount, 80);
   assert.equal(result.socialList.entries[0].recordIdRaw, 7);
   assert.equal(result.socialList.entries[0].flagRaw, true);
-  assert.equal(result.socialList.entries[0].accountId, undefined);
+  assert.equal(result.socialList.entries[0].accountId, null);
+  assert.equal(
+    result.socialList.entries[0].legacyIdentityId,
+    '18446744073709551615',
+  );
+  assert.equal(result.blacklist.kind, 'blacklist');
+  assert.equal(result.blacklist.entries[0].serverRecordId, 7);
+  assert.equal(result.blacklist.entries[0].isAccountBlock, true);
+  assert.equal(result.blacklist.entries[1].contentId, null);
+  assert.equal(result.friendGroups[0].groupIndex, 1);
+  assert.equal(result.friendGroups[0].iconAddonId, 1661);
+  assert.equal(
+    result.recentContacts[0].contentId,
+    0x00438d8134b183cen.toString(),
+  );
+  assert.equal(result.recentContacts[0].classJobId, 0x1234);
+  assert.deepEqual(result.coverage.candidateFields, []);
 });
 
 test('name and contact offsets follow block positions rather than legacy flat offsets or a fixed total length', () => {
@@ -244,4 +260,86 @@ test('header/trailer and nonzero trailing storage remain exact, without fabricat
   assert(result.coverage.unknownFields.some((f) => f.field === 'remainingHex'));
   assert.equal(decodeNativeSocial(105, Buffer.alloc(4)), null);
   assert.equal(decodeNativeSocial(106, Buffer.alloc(3)), null);
+});
+
+test('blacklist distinguishes server record keys, legacy content identities and account flags without inventing zero account IDs', () => {
+  const bytes = profile(4, 2);
+  // N:4 D:1 F:28 R:400 precede I. Locate the actual field rather than
+  // assume a byte offset in a separate serialized list.
+  let offset = 0;
+  while (offset < bytes.length) {
+    const tag = String.fromCharCode(bytes[offset]),
+      size = bytes.readUInt16LE(offset + 1);
+    if (tag === 'R') bytes.writeUInt16LE(0, offset + 3 + 2);
+    if (tag === 'I') bytes.writeBigUInt64LE(0n, offset + 3);
+    offset += 3 + size;
+    if (bytes.length - offset <= 3) break;
+  }
+  const list = decodeNativeSocial(
+    106,
+    container([block(4, 3, bytes)]),
+  ).blacklist;
+  assert.equal(list.entries[0].serverRecordId, 7);
+  assert.equal(list.entries[0].isAccountBlock, true);
+  assert.equal(list.entries[0].accountId, null);
+  assert.equal(list.entries[0].contentId, null);
+  assert.equal(list.entries[1].serverRecordId, 0);
+  assert.equal(list.entries[1].identityKind, 'content');
+  assert.equal(list.entries[1].contentId, 0x00438d8134b183cen.toString());
+});
+
+test('the 8- and 200-entry name caches decode full 48-byte records while preserving inactive storage and padding', () => {
+  const first = Buffer.alloc(392),
+    second = Buffer.alloc(9608);
+  first.writeUInt32LE(2);
+  first.write('队伍成员', 8);
+  first.writeBigUInt64LE(0xffffffffffffffffn, 40);
+  first.writeUInt16LE(1177, 48);
+  first.fill(0xaa, 50, 56);
+  first.write('Second', 56);
+  first.writeBigUInt64LE(123n, 88);
+  first.writeUInt16LE(1167, 96);
+  second.writeUInt32LE(1);
+  second.write('缓存名字', 8);
+  second.writeBigUInt64LE(0x00438d8134b183cen, 40);
+  second.writeUInt16LE(1177, 48);
+  second.writeBigUInt64LE(987n, 8 + 199 * 48 + 32);
+  const source = container([block(5, 0, first), block(6, 0, second)]);
+  const result = decodeNativeSocial(106, source);
+  assert.equal(result.partyMemberCache.entries.length, 2);
+  assert.deepEqual(result.partyMemberCache.entries[0], {
+    index: 0,
+    offset: 28,
+    isStoredEntry: true,
+    name: '队伍成员',
+    contentId: '18446744073709551615',
+    worldId: 1177,
+    nameStorageHex: first.subarray(8, 40).toString('hex'),
+    reservedTailHex: 'aaaaaaaaaaaa',
+    rawHex: first.subarray(8, 56).toString('hex'),
+  });
+  assert.equal(
+    result.characterNameCache.entries[0].contentId,
+    0x00438d8134b183cen.toString(),
+  );
+  assert.equal(result.characterNameCache.slots.length, 200);
+  assert.equal(result.characterNameCache.slots[199].contentId, '987');
+  assert.equal(result.characterNameCache.slots[199].isStoredEntry, false);
+  assert(!result.coverage.unknownFields.some((f) => /id=[56]/.test(f.field)));
+});
+
+test('native over-capacity cache counts reset active entries without discarding saved slots', () => {
+  const bytes = Buffer.alloc(392);
+  bytes.writeUInt32LE(9);
+  bytes.writeBigUInt64LE(123n, 40);
+  const result = decodeNativeSocial(106, container([block(5, 0, bytes)]));
+  assert.equal(result.partyMemberCache.declaredCountRaw, 9);
+  assert.equal(result.partyMemberCache.nativeCount, 0);
+  assert.equal(result.partyMemberCache.entries.length, 0);
+  assert.equal(result.partyMemberCache.slots[0].contentId, '123');
+  assert(
+    result.coverage.unknownFields.some(
+      (f) => f.field === 'blocks[id=5].declaredCountRaw',
+    ),
+  );
 });

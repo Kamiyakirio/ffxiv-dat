@@ -337,7 +337,8 @@ export function decodeUiRecords(
       !mirages ||
       count[0] !== ids.length ||
       sizes.length !== ids.length ||
-      seen.length !== mirages.length
+      seen.length < 7 ||
+      mirages.length < 7
     )
       return null;
     const entries = Array.from(ids, (petId, index) => ({
@@ -345,17 +346,33 @@ export function decodeUiRecords(
       petId,
       size: sizes[index],
       sizeName: ['小型', '中型', '大型'][sizes[index]] ?? '未定义大小',
-      isNewPetSeen: marked(seen, petId),
+      isNewPetSeen: petId >= 1 && petId <= 50 ? marked(seen, petId) : null,
       mirage:
-        marked(mirages, petId) === null ? null : marked(mirages, petId) ? 1 : 0,
+        petId < 1 || petId > 50 || marked(mirages, petId) === null
+          ? null
+          : marked(mirages, petId)
+            ? 1
+            : 0,
       mirageName:
-        marked(mirages, petId) === null
+        petId < 1 || petId > 50 || marked(mirages, petId) === null
           ? '未记录'
           : marked(mirages, petId)
             ? '替代外形'
             : '普通外形',
     }));
     const unknown = unknowns(list.slice(5));
+    if (count[0] > 50)
+      unknown.push({
+        field: 'count',
+        reason: '原生最多保存50条宠物设置；超出部分保留，不作为已验证容量。',
+        kind: 'meaning',
+      });
+    const reserved = (source: Buffer) => {
+      const bytes = Buffer.from(source);
+      bytes.fill(0, 0, 6);
+      bytes[6] &= 0xfc;
+      return bytes.toString('hex');
+    };
     for (const entry of entries) {
       if (entry.isNewPetSeen === null)
         unknown.push({
@@ -373,15 +390,35 @@ export function decodeUiRecords(
     return {
       count: count[0],
       petSettings: entries,
-      seenPetIds: bits(seen).map((bit) => bit + 1),
-      alternativeMiragePetIds: bits(mirages).map((bit) => bit + 1),
+      // Writer0x140819050 packs PetSetting+2/+3 to N/M; reader0x140819360
+      // restores those same bool/mirage fields, using only IDs1..50.
+      seenPetIds: bits(seen.subarray(0, 7))
+        .filter(
+          (bit) => bit < 50 && entries.some((entry) => entry.petId === bit + 1),
+        )
+        .map((bit) => bit + 1),
+      alternativeMiragePetIds: bits(mirages.subarray(0, 7))
+        .filter(
+          (bit) => bit < 50 && entries.some((entry) => entry.petId === bit + 1),
+        )
+        .map((bit) => bit + 1),
+      seenStorageHex: seen.toString('hex'),
+      mirageStorageHex: mirages.toString('hex'),
+      reservedSeenBitsHex: reserved(seen),
+      reservedMirageBitsHex: reserved(mirages),
       fields: retained(list),
       coverage: coverage(
-        ['count', 'petSettings.petId', 'petSettings.size'],
-        ['petSettings.isNewPetSeen', 'petSettings.mirage'],
+        [
+          'count',
+          'petSettings.petId',
+          'petSettings.size',
+          'petSettings.isNewPetSeen',
+          'petSettings.mirage',
+        ],
+        [],
         unknown,
       ),
-      note: 'I/S 数组对应 XBMNoteModule.PetSetting 的 Id/Size；N/M 按 petId-1 编址，在有值样本中 N 置位恰好覆盖 I 中全部宠物。位图对 bool/mirage 的绑定有源码和样本支持，仍保留候选级别。',
+      note: '原生writer0x140819050/reader0x140819360确认I/S对应Id/Size、N/M按petId-1对应已查看和普通/替代外形；大小0/1/2对应小/中/大。超过ID50的位保留为存储数据。',
     };
   }
   if (id === 38) {

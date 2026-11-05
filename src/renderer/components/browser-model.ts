@@ -130,7 +130,7 @@ function sectionNode(
     title: s.title,
     kind: 'collection',
     description: s.note,
-    editTarget: sectionEditTarget(detail, s),
+    editTarget: s.rows.length ? sectionEditTarget(detail, s) : undefined,
     children: [],
   };
   if (
@@ -407,6 +407,10 @@ function gearsets(detail: DecodedFileDetail): BrowserNode[] {
                   .join(' / ') || '无',
               ],
               ['物品缺失', item.itemMissing],
+              [
+                '注册物品不可用（可能使用替代装备）',
+                item.registeredItemUnavailable,
+              ],
               ['染色不同', item.colorDiffers],
               ['魔晶石不同', item.materiaDiffers],
               ['外观不同', item.appearanceDiffers],
@@ -534,10 +538,11 @@ function retainerContainers(
 ): BrowserNode[] {
   const grouped = new Map<string, BrowserNode>();
   const result: BrowserNode[] = [];
+  const otherSections: ReadableSection[] = [];
   for (const s of sections) {
     const match = /^(retainer|retainer-equipment|crystals)-(\d+)$/.exec(s.id);
     if (!match) {
-      result.push(sectionNode(detail, s));
+      otherSections.push(s);
       continue;
     }
     const key = `retainer:${match[2]}`;
@@ -561,7 +566,7 @@ function retainerContainers(
           : '水晶数量';
     group.children!.push(child);
   }
-  return result;
+  return [...result, ...readableNodes(detail, otherSections)];
 }
 export const fileDescriptions: Record<string, string> = {
   'UISAVE.DAT': '收藏、社交、肖像、战术板等角色配置',
@@ -655,6 +660,36 @@ function buildRoot(detail: DecodedFileDetail): BrowserNode {
   }
   if (name === 'GEARSET.DAT') {
     root.children = gearsets(detail);
+    root.sections = [
+      valueSection('gear-current', '当前套装状态', [
+        [
+          '当前套装槽位',
+          detail.data.currentGearsetIndex === null ||
+          detail.data.currentGearsetIndex === undefined
+            ? '未选择'
+            : Number(detail.data.currentGearsetIndex) + 1,
+        ],
+        ['当前装备与套装关联已中断', detail.data.currentGearsetLinkSuppressed],
+      ]),
+    ];
+    const snapshot = obj(detail.data.internalEquipmentSnapshot);
+    if (Object.keys(snapshot).length) {
+      const node = gearsets({
+        ...detail,
+        data: { records: [{ ...snapshot, isSavedGearsetSlot: true }] },
+      })[0];
+      node.key = 'equipment-snapshot';
+      node.title = '内部装备快照';
+      node.description = '客户端用于切换套装的装备快照，单独保存。';
+      node.empty = false;
+      node.sections![0].title = '快照信息';
+      const readOnly = (entry: BrowserNode) => {
+        entry.editTarget = undefined;
+        for (const child of entry.children ?? []) readOnly(child);
+      };
+      readOnly(node);
+      root.children.push(node);
+    }
     return root;
   }
   if (name === 'MACRO.DAT' || name === 'MACROSYS.DAT') {

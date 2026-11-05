@@ -136,15 +136,22 @@ export function sectionEditTarget(
         : prefix('gs.unseen');
   }
   if (filename === 'ACQ.DAT')
-    return id === 'contacts'
+    return id === 'contacts' && rows(data.contacts).length > 0
       ? prefix(row ? `contact.${rowIndex}.` : 'contact.')
       : target;
   if (filename === 'LOGFLTR.DAT') {
     const group = rows(data.groups)[Number(/^chat-(\d+)$/.exec(id)?.[1])];
-    return group
-      ? row
+    if (!group) return target;
+    const filters = rows(group.filters);
+    if (row)
+      return filters.some(
+        (filter) =>
+          filter.filterId === Number(row.filterId) && filter.isEditableSetting,
+      )
         ? ids(`log.${group.index}.${row.filterId}`)
-        : prefix(`log.${group.index}.`)
+        : target;
+    return filters.some((filter) => filter.isEditableSetting)
+      ? prefix(`log.${group.index}.`)
       : target;
   }
   if (filename === 'ADDON.DAT') {
@@ -155,11 +162,15 @@ export function sectionEditTarget(
       m[1] === 'ui'
         ? rows(dataset?.entries)
         : rows(rows(dataset?.layouts)[Number(m[3])]?.entries);
-    return prefix(
-      ...(row ? entries.slice(rowIndex, rowIndex! + 1) : entries).map(
-        (entry) => `addon.${entry.offset}.`,
-      ),
-    );
+    const visible = entries.filter((entry) => entry.isEmptyStorage !== true);
+    const sourceOffset =
+      rowIndex === undefined ? NaN : Number(section.sourceKeys?.[rowIndex]);
+    const selected = !row
+      ? visible
+      : Number.isFinite(sourceOffset)
+        ? visible.filter((entry) => Number(entry.offset) === sourceOffset)
+        : visible.slice(rowIndex, rowIndex! + 1);
+    return prefix(...selected.map((entry) => `addon.${entry.offset}.`));
   }
   if (filename !== 'UISAVE.DAT') {
     if (filename.startsWith('FFXIV_CHARA_')) {

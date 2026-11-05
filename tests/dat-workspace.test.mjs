@@ -149,3 +149,49 @@ test('backup members are visible separately and keep their parent relationship',
   assert.equal(workspace.getResult(child.id).data.entries[0].numericValue, 3);
   assert(result.files.some((file) => file.id === child.parentId));
 });
+
+test('character home worlds come from the newest matching full Content ID cache, never another character', async (t) => {
+  const { root } = await fixture(t);
+  const second = '00438D8134FA7E0B';
+  await mkdir(path.join(root, `FFXIV_CHR${second}`));
+  await mkdir(path.join(root, 'cfgcopy'));
+  async function cache(filename, contentId, worldId, updatedAt) {
+    const world = Buffer.alloc(5);
+    world.write('W');
+    world.writeUInt16LE(2, 1);
+    world.writeUInt16LE(worldId, 3);
+    const time = updatedAt.toString(16).padStart(16, '0');
+    const payload = Buffer.concat([
+      field('N', '相同昵称'),
+      world,
+      ...[
+        contentId.slice(0, 4),
+        contentId.slice(4, 10),
+        contentId.slice(10),
+      ].map((x) => field('I', x)),
+      ...[time.slice(0, 4), time.slice(4, 10), time.slice(10)].map((x) =>
+        field('T', x),
+      ),
+    ]);
+    await writeFile(
+      path.join(root, 'cfgcopy', filename),
+      Buffer.concat([
+        Buffer.from([255]),
+        Buffer.from(payload.map((x) => x ^ 0x73)),
+      ]),
+    );
+  }
+  await cache('FFXIV_CFGCPY01.dat', id, 1081, 1700000000);
+  await cache('FFXIV_CFGCPY02.dat', id, 1175, 1700000100);
+  await cache('FFXIV_CFGCPY03.dat', second, 1081, 1700000200);
+  // Later file ordering cannot override a newer cache with an old snapshot.
+  await cache('FFXIV_CFGCPY99.dat', id, 1081, 1699999999);
+  const directory = await new DatWorkspace().locate(root);
+  const first = directory.characters.find((c) => c.contentId === id);
+  const other = directory.characters.find((c) => c.contentId === second);
+  assert.equal(first.homeWorldId, 1175);
+  assert.equal(first.homeWorldName, '晨曦王座');
+  assert.equal(first.profileUpdatedAtUnix, 1700000100);
+  assert.equal(other.homeWorldId, 1081);
+  assert.equal(other.homeWorldName, '神意之地');
+});

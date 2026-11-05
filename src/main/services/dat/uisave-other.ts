@@ -3,6 +3,11 @@ import { decodeNativeCwls } from './uisave-cwls.ts';
 import { decodeNativeSocial } from './uisave-social.ts';
 import { decodeNativeAoz } from './uisave-aoz.ts';
 import { decodeNativeRetainerComments } from './uisave-retainers.ts';
+import { nativeFlagDetails } from './uisave-flag-details.ts';
+import {
+  decodeEmjYakumanHistory,
+  decodeEmjNpcWins,
+} from './uisave-emj-history.ts';
 
 function uints(data: Buffer, offset: number, count: number, width: number) {
   if (offset + count * width > data.length)
@@ -63,6 +68,7 @@ function decodeAdditionalUiSegmentData(
       patchMarkStates: [...data.subarray(80, 112)],
       uiFlagsHeaderHex: data.subarray(112, 128).toString('hex'),
       uiFlags: flags,
+      ...nativeFlagDetails(flags),
       namedFlagsCandidate: {
         summonedCompanionId: flags[1],
         lastSeenMentorVersion: flags[10],
@@ -178,8 +184,13 @@ function decodeAdditionalUiSegmentData(
             ? 'EmjVoiceNpc row ID; bit index = ID - 1, valid IDs 1..14'
             : 'EmjCostume seen ID (+0x1c); bit index = ID - 1, valid IDs 1..21; not the costume subrow index',
         };
+      } else if (chunk.key === 1 && bytes.length === 32) {
+        chunk.data = decodeEmjNpcWins(bytes);
       } else if (chunk.key === 0 && bytes.length === 80) {
         chunk.data = {
+          yakumanHistory: decodeEmjYakumanHistory(bytes),
+          historyReferenceBasis:
+            '原生和牌役列表的役满标志及五条历史写入链；役名使用固定公开Addon表文字，未重新提取目标SqPack。',
           statisticsCandidate: {
             // 0x140803fd0 shifts four 16B entries and writes the newest at
             // module+0x58. Value and clock meanings are intentionally unnamed.
@@ -204,7 +215,7 @@ function decodeAdditionalUiSegmentData(
     return {
       chunks,
       zeroPaddingHex: data.subarray(offset).toString('hex'),
-      note: 'Block 2 is the native 16-byte EmjModule+0x48 settings image; named public fields are confirmed by serialization and UI consumers. savedSettings retains byte values; settings applies native load guards. Blocks 3/4 are voice/costume seen bitmaps with ID-minus-one indexing. Private settings bytes and statistics meanings remain unresolved. settingsCandidate is retained as a compatibility alias.',
+      note: 'Block 2 is the native 16-byte EmjModule+0x48 settings image; named public fields are confirmed by serialization and UI consumers. savedSettings retains byte values; settings applies native load guards. Blocks 3/4 are voice/costume seen bitmaps with ID-minus-one indexing. Private settings bytes remain unresolved. Block0 is Yakuman history; block1 contains NPC difficulty win counters. settingsCandidate is retained as a compatibility alias.',
     };
   }
   return null;
@@ -294,9 +305,32 @@ export function decodeAdditionalUiSegment(
             `索引${rawIndex}出现0/1之外的布尔原值，uiFlags与兼容候选字段保留原值，未将其当作true。`,
           );
       }
-      meaning(
-        'uiFlags.unlistedIndices',
-        '源码只给出1、10、11、13、14、15、16、21的含义，其余索引值均保留但不能命名。',
+      knownFields.push(
+        'pvpWelcomeSeen',
+        'jobHudManualStates',
+        'jobHudManualVersion',
+        'jobHudManualNeedsReset',
+        'itemContextCustomizationVersion',
+        'classToJobHotbarPrompts',
+        'miniGameHighScore',
+      );
+      const hasUnmappedValues = (
+        decoded.unmappedUiFlags as { index: number; value: number }[]
+      ).some((entry) => entry.value !== 0);
+      (hasUnmappedValues ? meaning : storage)(
+        'unmappedUiFlags',
+        hasUnmappedValues
+          ? '出现未命名索引的非零保存值，需继续核对业务消费者。'
+          : '未命名索引当前全部为零，完整原值保留；后续出现非零值时应作为未解业务字段报告。',
+      );
+      if (Number(decoded.classToJobHotbarUnknownBits))
+        meaning(
+          'classToJobHotbarUnknownBits',
+          '九个原生职业提示位之外出现非零位，原值保留。',
+        );
+      storage(
+        'jobHudManualReservedBit0',
+        '职业量谱说明查询拒绝编号0；位0仍按原值保留。',
       );
       storage('patchMarksHeaderHex');
       storage('uiFlagsHeaderHex');
@@ -359,16 +393,38 @@ export function decodeAdditionalUiSegment(
           );
         } else if (chunk.key === 0 && content?.statisticsCandidate) {
           knownFields.push(
-            'chunks[key=0].data.statisticsCandidate.historyEntries (5 x 16-byte records)',
+            'chunks[key=0].data.yakumanHistory.storedYakuId',
+            'chunks[key=0].data.yakumanHistory.yakuCode',
+            'chunks[key=0].data.yakumanHistory.achievedAtUnix',
+            'chunks[key=0].data.yakumanHistory.hasRecord',
           );
+          const history = content.yakumanHistory as Record<string, unknown>[];
+          if (history.some((entry) => entry.hasRecord))
+            candidateFields.push(
+              'chunks[key=0].data.yakumanHistory.yakuNameCandidate',
+            );
+          if (
+            history.some(
+              (entry) => entry.hasRecord && entry.addonTextId === null,
+            )
+          )
+            meaning(
+              'chunks[key=0].data.yakumanHistory.storedYakuId',
+              '出现原生役满编号41至55之外的非零保存值，原值保留，未套用役名。',
+            );
+          storage(
+            'chunks[key=0].data.yakumanHistory.reservedHex',
+            '每条16字节记录后8字节整体移动保存，写入器只给前8字节赋役编号和Unix秒时间；保留尾部原值。',
+          );
+        } else if (chunk.key === 1 && Array.isArray(content?.npcWins)) {
+          knownFields.push('chunks[key=1].data.npcWins.winCount');
           candidateFields.push(
-            'chunks[key=0].data.statisticsCandidate.timestampCandidate',
+            'chunks[key=1].data.npcWins.difficultyNameCandidate',
           );
-          meaning(
-            'chunks[key=0].data.statisticsCandidate.historyEntries.valueRaw/timeRaw',
-            '对应源码Unk58和Unk68历史数组，数值类型可读，但统计项目的含义尚未定义。',
+          storage(
+            'chunks[key=1].data.reservedHex',
+            '原生只读写前三个16位人机胜场计数器；其余26字节原值保留。',
           );
-          storage('chunks[key=0].data.statisticsCandidate.unknownGapHex');
         } else
           meaning(
             `chunks[key=${chunk.key}].data`,

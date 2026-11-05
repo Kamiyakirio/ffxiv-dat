@@ -216,17 +216,29 @@ export function linkHotbarReferences(
   slots: Row[],
   macros: Row[],
   gearsets: Row[],
+  sharedMacros: Row[] = [],
 ): void {
   for (const slot of slots) {
     if (
       slot.commandTypeName === 'Macro' &&
       typeof slot.commandId === 'number' &&
-      slot.commandId < 100
+      Number.isInteger(slot.commandId) &&
+      slot.commandId >= 0 &&
+      slot.commandId <= 0x163
     ) {
-      const record = macros.find((macro) => macro.index === slot.commandId);
+      // Target writer 0x1407d90cd / reader 0x1407d8b57 copy CommandId
+      // unchanged. Icon consumer 0x1407cd5d2..cd617 splits low-byte index
+      // and high-byte bank, accepting two banks and indices below 100.
+      const bank = slot.commandId >>> 8,
+        index = slot.commandId & 255;
+      const source = bank === 0 ? macros : sharedMacros;
+      const record =
+        index < 100 ? source.find((macro) => macro.index === index) : undefined;
       if (record) {
-        slot.commandName = record.name || `未命名宏（槽位 ${slot.commandId}）`;
-        slot.nameSource = `MACRO.DAT#${slot.commandId}`;
+        slot.commandName =
+          record.name ||
+          `未命名${bank ? '公用' : '个人'}宏（槽位 ${index + 1}）`;
+        slot.nameSource = `${bank ? 'MACROSYS' : 'MACRO'}.DAT#${index}`;
       }
     }
     if (slot.commandTypeName === 'GearSet') {

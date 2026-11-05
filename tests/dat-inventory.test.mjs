@@ -24,7 +24,7 @@ function field(tag, bytes, lengthBytes = 2) {
   return Buffer.concat([header, bytes]);
 }
 
-test('acquaintance records retain unverified identifier parts without inventing semantics', () => {
+test('acquaintance records confirm native ContentId storage and preserve flags without guessing bits', () => {
   const values = [
     'Tester',
     'World',
@@ -46,11 +46,11 @@ test('acquaintance records retain unverified identifier parts without inventing 
   assert.deepEqual(result.data.contacts[0].inferred.contentIdCandidate, {
     hex: '0040000BE0123456',
     decimal: BigInt('0x0040000BE0123456').toString(),
-    confidence: 'inferred',
+    confidence: 'confirmed-native',
   });
   assert.deepEqual(result.data.contacts[0].inferred.flagsCandidate, {
     value: 0x1000,
-    confidence: 'inferred',
+    confidence: 'confirmed-native',
   });
   assert.equal(decodeAcquaintance(Buffer.alloc(0), 100).data.contactCount, 0);
   assert.throws(

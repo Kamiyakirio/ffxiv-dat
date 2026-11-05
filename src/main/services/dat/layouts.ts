@@ -1,4 +1,6 @@
 import type { DatDecodeResult } from './types.ts';
+import { nativeAddonName } from './addon-names.ts';
+import targetData from './native-save-data.json' with { type: 'json' };
 import {
   describeHotbarCommand,
   hotbarTypes,
@@ -72,6 +74,46 @@ function unsupported(
   };
 }
 
+// Target SHA-256 958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9.
+// 0x1407d9020 writes runtime groups 46..69 as disk groups 64..87 (+18).
+// 0x1407d8a70 reads this exact range back (-18), rejecting the gap 46..63.
+// 0x1407d9920 / 0x1407d99d0 map PvP groups through ClassJob.JobIndex
+// (+0x5c): add 46 before BLU, 45 after BLU, 44 after BST; BLU/BST keep
+// their PvE groups. The pinned targetData.jobs provides the target JobIndex.
+function hotbarGroup(groupId: number) {
+  if (groupId < 46)
+    return {
+      savedHotbarIndex: groupId,
+      groupKind: groupId === 0 ? 'shared' : 'classJob',
+      classJobId: groupId,
+      isPvp: false,
+    };
+  if (groupId >= 64 && groupId < 88) {
+    const savedHotbarIndex = groupId - 18;
+    const job = Object.entries(targetData.jobs).find(([index, job]) => {
+      const classJobId = job.classJobId;
+      return (
+        classJobId !== 36 &&
+        classJobId !== 43 &&
+        Number(index) + (classJobId < 36 ? 46 : classJobId < 43 ? 45 : 44) ===
+          savedHotbarIndex
+      );
+    });
+    return {
+      savedHotbarIndex,
+      groupKind: groupId === 64 ? 'pvpShared' : 'pvpClassJob',
+      classJobId: groupId === 64 ? 0 : (job?.[1].classJobId ?? null),
+      isPvp: true,
+    };
+  }
+  return {
+    savedHotbarIndex: null,
+    groupKind: 'unmapped',
+    classJobId: null,
+    isPvp: null,
+  };
+}
+
 export function decodeHotbar(
   payload: Buffer,
   version: number,
@@ -82,6 +124,7 @@ export function decodeHotbar(
   const seen = new Set<string>();
   const groups = new Set<number>();
   const unknownTypes = new Set<number>();
+  const unknownGroups = new Set<number>();
   const slots = [];
   for (let offset = 0; offset < payload.length; offset += 8) {
     const commandId = payload.readUInt32LE(offset);
@@ -96,12 +139,16 @@ export function decodeHotbar(
     seen.add(key);
     groups.add(groupId);
     if (!(commandType in hotbarTypes)) unknownTypes.add(commandType);
+    const mapping = hotbarGroup(groupId);
+    if (mapping.classJobId === null) unknownGroups.add(groupId);
     slots.push({
       offset,
       groupId,
+      ...mapping,
+      // Compatibility names; formal fields above now have native confirmation.
       groupKindCandidate:
-        groupId === 0 ? 'shared' : groupId < 64 ? 'classJob' : 'pvpStoredGroup',
-      classJobIdCandidate: groupId > 0 && groupId < 64 ? groupId : null,
+        groupId === 0 ? 'shared' : groupId < 46 ? 'classJob' : 'pvpStoredGroup',
+      classJobIdCandidate: mapping.classJobId === 0 ? null : mapping.classJobId,
       barIndex,
       slotIndex,
       commandType,
@@ -114,48 +161,37 @@ export function decodeHotbar(
     });
   }
   const groupNames: Record<number, string | null> = Object.fromEntries(
-    [...groups]
-      .filter((id) => id > 0 && id < 64)
-      .map((id) => [id, gameName('ClassJob', id)]),
+    [...groups].map((id) => {
+      const group = hotbarGroup(id);
+      const name = group.classJobId
+        ? gameName('ClassJob', group.classJobId)
+        : null;
+      return [
+        id,
+        id === 0
+          ? '共享热键栏'
+          : id === 64
+            ? '共享 PvP 热键栏'
+            : group.isPvp && name
+              ? `${name} · PvP`
+              : name,
+      ];
+    }),
   );
-  const groupJobHints: Record<
-    number,
-    { classJobId: number; matchingActions: number; basis: string }
-  > = {};
-  for (const groupId of groups) {
-    if (groupId < 64) continue;
-    const jobs = new Map<number, number>();
-    for (const slot of slots) {
-      if (slot.groupId !== groupId || slot.commandTypeName !== 'Action')
-        continue;
-      const job = Number(gameName('ActionClassJob', slot.commandId));
-      if (job > 0) jobs.set(job, (jobs.get(job) ?? 0) + 1);
-    }
-    if (jobs.size === 1) {
-      const [job, count] = [...jobs][0];
-      groupNames[groupId] = `${gameName('ClassJob', job) ?? job}（技能匹配）`;
-      groupJobHints[groupId] = {
-        classJobId: job,
-        matchingActions: count,
-        basis:
-          '此组所有带明确职业引用的技能均指向同一 ClassJob；这是内容匹配，不宣称执行了客户端的存储索引转换。',
-      };
-    }
-  }
   return {
-    status: unknownTypes.size ? 'partial' : 'decoded',
+    status: unknownTypes.size || unknownGroups.size ? 'partial' : 'decoded',
     data: {
       recordSize: 8,
       slotCount: slots.length,
       nonemptySlotCount: slots.filter((slot) => slot.commandType !== 0).length,
       groupIds: [...groups].sort((a, b) => a - b),
       groupNames,
-      groupJobHints,
+      groupJobHints: {},
       nameCatalog,
       indexConvention:
         'barIndex and slotIndex are zero-based; groupId is the stored byte, not a runtime array index',
       groupMappingEvidence:
-        'PvE/shared candidates follow SavedHotbars source comments; classifying stored bytes 64..85 as PvP is inferred from these samples. No PvP group-to-ClassJob conversion is asserted.',
+        'Target writer 0x1407d9020 and reader 0x1407d8a70 confirm disk/PvP +18 encoding. GetPvPSavedHotbarIndexForClassJobId 0x1407d9920 and inverse 0x1407d99d0 plus target ClassJob.JobIndex establish job identity.',
       slots,
     },
     warnings: [...unknownTypes].map(
@@ -165,21 +201,32 @@ export function decodeHotbar(
       structureComplete: true,
       knownFields: [
         'slots[].groupId',
+        'slots[].savedHotbarIndex',
+        'slots[].groupKind',
+        'slots[].classJobId',
+        'slots[].isPvp',
         'slots[].barIndex',
         'slots[].slotIndex',
         'slots[].commandType',
         'slots[].commandId',
         'slots[].commandTypeName (defined enum values)',
       ],
-      candidateFields: [
-        'slots[].groupKindCandidate',
-        'slots[].classJobIdCandidate',
+      candidateFields: [],
+      unknownFields: [
+        ...[...unknownTypes].map((type) => ({
+          field: `slots[].commandType ${type}`,
+          reason: '存储类型字节可读取，但当前源码枚举未定义该类型。',
+          kind: 'meaning' as const,
+        })),
+        ...[...unknownGroups].map((groupId) => ({
+          field: `slots[groupId=${groupId}]`,
+          reason:
+            groupId >= 64 && groupId < 88
+              ? '此PvP存储索引在目标范围内，但目标ClassJob表没有对应可用职业，保留原始组号。'
+              : '该组号不在目标读取器接受的0..45或64..87范围，保留原值，不冒充职业。',
+          kind: 'meaning' as const,
+        })),
       ],
-      unknownFields: [...unknownTypes].map((type) => ({
-        field: `slots[].commandType ${type}`,
-        reason: '存储类型字节可读取，但当前源码枚举未定义该类型。',
-        kind: 'meaning',
-      })),
     },
   };
 }
@@ -196,7 +243,7 @@ export function decodeGearset(
       'GEARSET v110 payload is not 4 bytes plus complete 452-byte records',
     );
   const warnings = [
-    'The four leading metadata bytes and the role of any record beyond the first 100 slots remain unidentified.',
+    'Target v110 stores 100 registered gearsets and one internal equipment-switch snapshot; its two leading metadata values are decoded using the native writer and readers.',
     'Unknown flag bits, alignment bytes, and item padding are retained as raw values.',
   ];
   const records = [];
@@ -239,10 +286,17 @@ export function decodeGearset(
         })),
         flags: record[at + 25],
         itemMissing: !!(record[at + 25] & 1),
+        // 0x1407f2d9d..2dad maps InventoryManager's per-item status[1]
+        // to bit1. Original mainhand not found/usable enters a replacement
+        // flow (0x14087b13e..b275, Addon4385), carried through +0x243c to
+        // status[1] at 0x14087ace5..acfc. A failed equip also sets it at
+        // 0x14087b7bf..7df. It means the registered item was not usable as
+        // saved; this can coexist with a replacement, unlike missing bit0.
+        registeredItemUnavailable: !!(record[at + 25] & 2),
         colorDiffers: !!(record[at + 25] & 4),
         materiaDiffers: !!(record[at + 25] & 8),
         appearanceDiffers: !!(record[at + 25] & 16),
-        unknownFlags: record[at + 25] & 0xe2,
+        unknownFlags: record[at + 25] & 0xe0,
         unknownTailHex: record.subarray(at + 26, at + 28).toString('hex'),
       };
     });
@@ -250,6 +304,12 @@ export function decodeGearset(
       offset,
       recordIndex,
       isSavedGearsetSlot: recordIndex < 100,
+      recordRole:
+        recordIndex < 100
+          ? 'savedGearset'
+          : recordIndex === 100
+            ? 'internalEquipmentSnapshot'
+            : 'unrecognizedAdditionalRecord',
       id,
       name,
       nameBytesHex: nameBytes.toString('hex'),
@@ -278,6 +338,24 @@ export function decodeGearset(
     status: 'partial',
     data: {
       metadataHex: payload.subarray(0, 4).toString('hex'),
+      // 0x1407f5200 writes bytes 1/2 from module+B504/B508, zeroes 0/3,
+      // and copies 101 x 0x1c4 bytes from module+0x50. 0x1407f4b26 reads
+      // byte1 (signed, normalized to 255 outside 0..99) and byte2 (!=0).
+      currentGearsetIndexRaw: payload[1],
+      currentGearsetIndex: payload[1] < 100 ? payload[1] : null,
+      currentGearsetLinkSuppressedRaw: payload[2],
+      // GetCurrent 0x1407f0790 returns 255 whenever module+B508 != 0;
+      // 0x1407f0810 exposes the opposite selection. This behavioral name
+      // does not speculate about an undocumented UI mode label.
+      currentGearsetLinkSuppressed: payload[2] !== 0,
+      metadataReservedHex: Buffer.from([payload[0], payload[3]]).toString(
+        'hex',
+      ),
+      // Slot 100 is copied to/from a temporary backup during
+      // EquipGearsetInternal 0x1407f0930 / completion 0x1407f2c3b. The live
+      // inventory snapshot is populated by 0x1407f2770 -> 0x1407f5360.
+      internalEquipmentSnapshot: records[100] ?? null,
+
       recordSize: stride,
       recordCount: records.length,
       existingRecordCount: records.filter((record) => record.exists).length,
@@ -288,6 +366,11 @@ export function decodeGearset(
     coverage: {
       structureComplete: true,
       knownFields: [
+        'currentGearsetIndexRaw',
+        'currentGearsetIndex',
+        'currentGearsetLinkSuppressed',
+        'internalEquipmentSnapshot',
+        'records[].recordRole',
         'records[].id',
         'records[].name',
         'records[].classJobId',
@@ -301,22 +384,23 @@ export function decodeGearset(
         'records[].items[].stainIds',
         'records[].items[].materia',
         'records[].items[].flags (known source bits)',
+        'records[].items[].registeredItemUnavailable',
         'records[].glassesIds',
       ],
       candidateFields: [],
       unknownFields: [
         {
-          field: 'metadataHex',
+          field: 'metadataReservedHex',
           reason:
-            '前4字节的存储边界已确认，但未找到它们与运行时字段绑定的实现。',
-          kind: 'meaning',
+            '原生写入器将前导第0、3字节置零；不作为业务字段，原值完整保留。',
+          kind: 'storage',
         },
-        ...(records.length > 100
+        ...(records.length > 101
           ? [
               {
-                field: 'records[100..]',
+                field: 'records[101..]',
                 reason:
-                  '运行时源码仅定义100个用户套装槽；附加记录可按相同布局读取，但其用途未确认，不作为可用套装。',
+                  '目标写入器只保存100个注册套装和索引100的内部切换快照；更多记录保留原值，不能声称为用户套装。',
                 kind: 'meaning' as const,
               },
             ]
@@ -358,9 +442,40 @@ function crc32(value: string): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+function addonElementSettings(name: string | null, parameter: number) {
+  // LoadAddonConfig 0x14067ad81..d8a maps saved +0x10 to AtkUnitBase.Param.
+  // JobHud's inherited OnConfigLoaded 0x1415a8f30 tests the entire Param
+  // for nonzero, applies UseSimpleGauge (+0x239), then normalizes to 0/1.
+  if (name && /^JobHud[A-Z]{3}\d/.test(name))
+    return { kind: 'jobGauge', useSimpleGauge: parameter !== 0 };
+  // ActionBar OnConfigLoaded 0x141584c10 decodes this three-byte image;
+  // 0x1415843f0 writes (GetBarId | ((layout+1) << 8) | (otherBarId <<16)).
+  if (name && /^_ActionBar(?:\d{2}|Ex)?$/.test(name)) {
+    const layoutStored = (parameter >>> 8) & 0xff;
+    const layoutIndex = layoutStored === 0 ? null : layoutStored - 1;
+    return {
+      kind: 'hotbar',
+      hotbarIndex: parameter & 0xff,
+      alternateHotbarIndex: (parameter >>> 16) & 0xff,
+      usesDefaultLayout: layoutStored === 0,
+      layoutStored,
+      layoutIndex,
+      layoutName:
+        layoutIndex === null
+          ? null
+          : (['12 × 1', '6 × 2', '4 × 3', '3 × 4', '2 × 6', '1 × 12'][
+              layoutIndex
+            ] ?? null),
+      unknownBits: parameter >>> 24,
+    };
+  }
+  return { kind: 'addonSpecific', parameterRaw: parameter };
+}
+
 function addonEntry(payload: Buffer, offset: number): Record<string, unknown> {
   const record = span(payload, offset, 32, 'ADDON config entry');
   const hash = record.readUInt32LE(0);
+  const addonName = nativeAddonName(hash) ?? addonNamesByHash.get(hash) ?? null;
   const floating = [
     record.readFloatLE(4),
     record.readFloatLE(8),
@@ -370,14 +485,35 @@ function addonEntry(payload: Buffer, offset: number): Record<string, unknown> {
     offset,
     addonNameHash: hash,
     addonNameHashHex: hash.toString(16).padStart(8, '0'),
-    addonName: addonNamesByHash.get(hash) ?? null,
+    addonName,
+    isEmptyStorage: record.every((byte) => byte === 0),
     x: Number.isFinite(floating[0]) ? floating[0] : null,
     y: Number.isFinite(floating[1]) ? floating[1] : null,
     scale: Number.isFinite(floating[2]) ? floating[2] : null,
     positionAndScaleBytesHex: record.subarray(4, 16).toString('hex'),
     elementFlags: record.readUInt32LE(16),
+    elementSettings: addonElementSettings(addonName, record.readUInt32LE(16)),
     width: record.readUInt16LE(20),
     height: record.readUInt16LE(22),
+    // 0x1407da100 key0 -> byte+0x18, then LoadAddonConfig
+    // 0x14067aa83 -> AtkUldWidgetInfo.WidgetAlignment.AlignmentType.
+    // This is nine-way anchoring, NOT a visibility boolean.
+    alignmentType: record[24],
+    alignmentName:
+      ['左上', '上', '右上', '左', '中', '右', '左下', '下', '右下'][
+        record[24]
+      ] ?? null,
+    // ApplyHudLayout 0x1407de464 selects bit PadMode (ConfigOption90):
+    // bit0 keyboard/mouse, bit1 gamepad. These are HUD settings, not the
+    // transient open/closed state of every ordinary window.
+    hudVisibilityRaw: record[25],
+    hudVisibleKeyboardMouse: (record[25] & 1) !== 0,
+    hudVisibleGamepad: (record[25] & 2) !== 0,
+    unknownHudVisibilityBits: record[25] & 0xfc,
+    // 0x1407de3e2 chooses parameter-only restoration when bit0 is set;
+    // otherwise +0x00..0x23 are copied (0x1407de42e..445).
+    flagsOnlyOverride: (record[26] & 1) !== 0,
+    unknownOverrideBits: record[26] & 0xfe,
     byteValue1: record[24],
     byteValue2: record[25],
     byteValue3: record[26],
@@ -457,7 +593,14 @@ export function decodeAddon(payload: Buffer, version: number): DatDecodeResult {
       layouts.push({
         offset: offset + layoutOffset,
         layoutIndex,
-        nameCandidate: text(layoutHeader.subarray(0, 48)),
+        // Writer 0x1407def01..51 reads _hudLayoutNames at dataSet+0x9ba8
+        // (Utf8String stride 0x68), writes at most 15 bytes into this header.
+        // Reader 0x1407dd580..597 assigns it back to that exact name array.
+        // The target UI currently saves empty strings; this does not imply
+        // that a user-facing layout rename operation exists.
+        name: text(layoutHeader.subarray(0, 16)),
+        nameCandidate: text(layoutHeader.subarray(0, 16)), // Compatibility alias.
+        nameStorageHex: layoutHeader.subarray(0, 16).toString('hex'),
         headerHex: layoutHeader.toString('hex'),
         entries: Array.from({ length: entriesPerLayout }, (_, n) =>
           addonEntry(payload, offset + layoutOffset + entryOffset + n * 32),
@@ -482,6 +625,12 @@ export function decodeAddon(payload: Buffer, version: number): DatDecodeResult {
     });
     offset += byteLength;
   }
+  const allEntries = datasets
+    .flatMap((dataset) => [
+      ...dataset.entries,
+      ...dataset.layouts.flatMap((layout) => layout.entries),
+    ])
+    .filter((entry) => !entry.isEmptyStorage);
   return {
     status: 'partial',
     data: {
@@ -497,7 +646,7 @@ export function decodeAddon(payload: Buffer, version: number): DatDecodeResult {
     warnings: [
       'ADDON disk entries are 32 bytes; runtime-only HasValue/IsOpen bytes from the 36-byte memory struct are not stored here.',
       'Coordinates, scale, dimensions, hashes and raw flags are decoded; undocumented header/tail fields retain raw bytes.',
-      'Addon name lookup covers names explicitly annotated in the pinned structure source; unmatched hashes remain null.',
+      'Addon names use exact CRC32(name + _a) matches against the supplied EXE strings/formats and pinned structure annotations; unmatched hashes remain null. All-zero storage slots are retained in structure data.',
     ],
     coverage: {
       structureComplete: true,
@@ -511,22 +660,57 @@ export function decodeAddon(payload: Buffer, version: number): DatDecodeResult {
         'datasets[].entries[].width',
         'datasets[].entries[].height',
         'datasets[].entries[].alpha',
+        'datasets[].entries[].alignmentType / alignmentName',
+        'datasets[].entries[].hudVisibilityRaw / hudVisibleKeyboardMouse / hudVisibleGamepad',
+        'datasets[].entries[].flagsOnlyOverride',
+        'datasets[].entries[].elementSettings (job gauge/simple mode and hotbar layout)',
         'datasets[].layouts[].entries',
+        'datasets[].layouts[].name',
       ],
-      candidateFields: ['datasets[].layouts[].nameCandidate'],
+      candidateFields: [],
       unknownFields: [
-        {
-          field: 'entries[].elementFlags',
-          reason:
-            '该值会随界面元素表示热键栏形状或职业量谱模式等，当前源码未定义各元素的位掩码。',
-          kind: 'meaning',
-        },
-        {
-          field: 'entries[].byteValue1 / byteValue2 / byteValue3',
-          reason:
-            '当前源码仅对可见/启用用途加问号注释，不能将它们一律当成布尔开关。',
-          kind: 'meaning',
-        },
+        ...(allEntries.some((entry) => {
+          const settings = entry.elementSettings as Record<string, unknown>;
+          return (
+            (settings.kind === 'addonSpecific' && entry.elementFlags !== 0) ||
+            (settings.kind === 'hotbar' &&
+              (settings.unknownBits ||
+                (!settings.usesDefaultLayout && settings.layoutName === null)))
+          );
+        })
+          ? [
+              {
+                field:
+                  'entries[].elementFlags (other addon-specific parameters)',
+                reason:
+                  '职业量谱简易模式与热键栏编号/形状已由原生加载器确认；其他窗口的非零Param仍各有独立用途，原值保留，不能套用量谱或热键栏解释。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
+        ...(allEntries.some((entry) => entry.alignmentName === null)
+          ? [
+              {
+                field: 'entries[].alignmentType',
+                reason: '出现9宫格锚点0..8之外的编号，原始字节保留。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
+        ...(allEntries.some(
+          (entry) =>
+            entry.unknownHudVisibilityBits || entry.unknownOverrideBits,
+        )
+          ? [
+              {
+                field:
+                  'entries[].unknownHudVisibilityBits / unknownOverrideBits',
+                reason:
+                  'HUD显隐和参数覆盖字节出现已确认位之外的值，原始字节保留。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
         {
           field:
             'containerHeaderHex / datasets[].headerHex / layouts[].headerHex / unknownTailHex',

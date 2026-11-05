@@ -27,10 +27,34 @@ test('chat filter states map 0/1 to hidden/displayed without treating reserved s
   payload.set([0, 1, 2, 9], 16);
   const result = decodeLogFilter(payload, 3);
   assert.deepEqual(result.data.groups[0].filters, [
-    { filterId: 0, rawState: 0, enabled: false, stateLabel: '隐藏' },
-    { filterId: 1, rawState: 1, enabled: true, stateLabel: '显示' },
-    { filterId: 2, rawState: 2, enabled: null, stateLabel: '保留项' },
-    { filterId: 3, rawState: 9, enabled: null, stateLabel: '未知状态 9' },
+    {
+      filterId: 0,
+      isEditableSetting: true,
+      rawState: 0,
+      enabled: false,
+      stateLabel: '隐藏',
+    },
+    {
+      filterId: 1,
+      isEditableSetting: true,
+      rawState: 1,
+      enabled: true,
+      stateLabel: '显示',
+    },
+    {
+      filterId: 2,
+      isEditableSetting: false,
+      rawState: 2,
+      enabled: null,
+      stateLabel: '保留项',
+    },
+    {
+      filterId: 3,
+      isEditableSetting: false,
+      rawState: 9,
+      enabled: null,
+      stateLabel: '未知状态 9',
+    },
   ]);
   assert(
     result.coverage.knownFields.some((field) => field.includes('enabled')),
@@ -154,8 +178,13 @@ test('gearset banner references use the documented plus-one encoding and separat
   assert.equal(result.data.records[1].bannerIndex, null);
   assert.equal(result.data.records[99].isSavedGearsetSlot, true);
   assert.equal(result.data.records[100].isSavedGearsetSlot, false);
+  assert.equal(result.data.internalEquipmentSnapshot.recordIndex, 100);
+  assert.equal(
+    result.data.records[100].recordRole,
+    'internalEquipmentSnapshot',
+  );
   assert(
-    result.coverage.unknownFields.some(
+    !result.coverage.unknownFields.some(
       (field) => field.field === 'records[100..]',
     ),
   );

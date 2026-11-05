@@ -94,3 +94,30 @@ test('CWLS rejects unverified versions and incomplete or extended layouts', () =
   assert.equal(decodeNativeCwls(4, Buffer.alloc(1457)), null);
   assert.equal(decodeNativeCwls(4, Buffer.alloc(0)), null);
 });
+
+test('CWLS expands all five native storage banks without claiming a data-center mapping for unused banks', () => {
+  const bytes = Buffer.alloc(1456);
+  bytes.writeBigUInt64LE(0xffffffffffffffffn, 8 + 4 * 288 + 3 * 64 + 7 * 8);
+  bytes.writeBigUInt64LE(0xf123456789abcde0n, 264 + 4 * 288 + 3 * 8);
+  const decoded = decodeNativeCwls(4, bytes);
+  assert.equal(decoded.storageBanks.length, 5);
+  assert.equal(decoded.additionalStorageBanks.length, 4);
+  assert.equal(decoded.storageBanks[0].usedByTargetCnLookup, true);
+  const last = decoded.storageBanks[4];
+  assert.equal(last.usedByTargetCnLookup, false);
+  assert.equal(last.allZero, false);
+  assert.equal(last.offset, 1160);
+  assert.deepEqual(last.groups[3].slots[7], {
+    slot: 7,
+    offset: 1408,
+    linkshellId: '18446744073709551615',
+  });
+  assert.equal(
+    last.groups[3].selectedLinkshellId,
+    0xf123456789abcde0n.toString(),
+  );
+  assert.equal(last.groups[3].dataCenterIdForTargetClient, null);
+  assert.equal(last.groups[3].dataCenterNameForTargetClient, null);
+  assert.equal(decoded.storageBanks[3].allZero, true);
+  assert.equal(decoded.groups, decoded.storageBanks[0].groups);
+});

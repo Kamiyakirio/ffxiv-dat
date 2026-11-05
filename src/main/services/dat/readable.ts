@@ -1,3 +1,5 @@
+import { addonDisplayName } from './addon-names.ts';
+import { formatGameId } from '../../../shared/character-label.ts';
 import type {
   DecodedFileDetail,
   ReadableSection,
@@ -19,6 +21,18 @@ const rows = (value: unknown): Row[] =>
   Array.isArray(value) ? value.map(object) : [];
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const number = (value: unknown) => Number(value ?? 0);
+function playerWorld(record: Row): string | null {
+  const worldId = number(record.worldId ?? record.worldIdRaw);
+  return (
+    (typeof record.worldName === 'string' && record.worldName) ||
+    (worldId > 0
+      ? gameName('World', worldId) || `未知服务器（ID ${worldId}）`
+      : null)
+  );
+}
+function playerLabel(record: Row, nameKey = 'name'): string {
+  return formatGameId(record[nameKey], playerWorld(record));
+}
 const labels: Record<string, string> = {
   name: '名称',
   settingName: '过滤方式',
@@ -76,6 +90,29 @@ const labels: Record<string, string> = {
   settingsCandidate: '麻将设置（布局对应待验证）',
   settings: '设置',
   statisticsCandidate: '麻将历史数值（业务含义待核对）',
+  yakumanHistory: '役满成就记录',
+  npcWins: '人机对战胜场',
+  difficultyNameCandidate: '难度（公开表关联）',
+  winCount: '胜场',
+  yakuNameCandidate: '役满名称（公开表关联）',
+  storedYakuId: '役满保存编号',
+  hasRecord: '已保存记录',
+  achievedAtUnix: '达成时间',
+  jobHudManualStates: '职业量谱说明已读状态',
+  savedIsSeen: '保存的已查看标志',
+  jobHudManualVersion: '职业量谱说明状态版本',
+  jobHudManualNeedsReset: '需重置旧版量谱说明状态',
+  manualId: '说明编号',
+  actionNameCandidate: '关联技能（公开表）',
+  guideIdCandidate: '指南编号（公开表）',
+  pvpWelcomeSeen: '已查看 PvP 欢迎说明',
+  itemContextCustomizationVersion: '物品菜单设置版本',
+  itemContextCustomizationNeedsMigration: '需要迁移物品菜单设置',
+  classToJobHotbarPrompts: '转职热键栏提示',
+  handled: '提示已处理',
+  prerequisiteQuestId: '前置任务编号',
+  miniGameHighScore: '小游戏历史最高分',
+  unmappedUiFlags: '尚未命名的界面状态',
   tileSet: '牌面样式编号（候选）',
   hideHints: '隐藏提示（候选）',
   hideDangerousTileMarker: '隐藏危险牌标记（候选）',
@@ -88,6 +125,7 @@ const labels: Record<string, string> = {
   disableCharacterVoices: '关闭角色语音（候选）',
   emjVoiceNpc: '语音角色编号（候选）',
   emjCostumeId: '服装编号（候选）',
+  recordUpdatedAtUnix: '角色配置记录更新时间',
   timestampCandidate: '时间整数（用途待核对）',
   historyValues: '历史统计整数（项目含义待核对）',
   historyEntries: '历史条目（数值含义待核对）',
@@ -321,25 +359,6 @@ const containerNames: Record<string, string> = {
   premiumSaddleBag: '高级陆行鸟鞍囊',
   retainer: '雇员背包',
 };
-const addonNames: Record<string, string> = {
-  ItemDetail: '物品详情',
-  Character: '角色',
-  ChatLog: '聊天栏',
-  _PartyList: '小队列表',
-  _EnemyList: '敌对列表',
-  _CastBar: '咏唱条',
-  _Exp: '经验条',
-  _Money: '金币',
-  _NaviMap: '小地图',
-  _ParameterWidget: '角色参数',
-  _ToDoList: '任务列表',
-  _TargetInfo: '目标信息',
-  _FocusTargetInfo: '焦点目标',
-  _ActionBar: '热键栏 1',
-  _ActionCross: '十字热键栏',
-  _LimitBreak: '极限槽',
-  _MainCross: '主菜单',
-};
 function named(sheet: string, id: unknown) {
   return number(id) === 0
     ? '空位'
@@ -380,7 +399,9 @@ function valueText(key: string, value: unknown): string | number | null {
     key === 'unixTimestamp' ||
     key === 'lastUpdatedUnix' ||
     key === 'completionUnixCandidate' ||
-    key === 'completionUnix'
+    key === 'completionUnix' ||
+    key === 'achievedAtUnix' ||
+    key === 'recordUpdatedAtUnix'
   )
     return timestamp(value);
   if (typeof value === 'boolean') return value ? '是' : '否';
@@ -485,12 +506,15 @@ function inventorySections(data: Row): ReadableSection[] {
         `${title} · 水晶数量`,
         [
           ['slot', '缓存槽位'],
+          ['name', '水晶种类'],
           ['quantity', '数量'],
         ],
         list(retainer.crystalQuantities).flatMap((quantity, slot) =>
-          number(quantity) ? [{ slot: slot + 1, quantity }] : [],
+          number(quantity)
+            ? [{ slot: slot + 1, name: itemName(slot + 2), quantity }]
+            : [],
         ),
-        '槽位与水晶种类的对应关系尚未验证，不推测名称。',
+        '原生物品搜索按物品编号减2读取18个水晶槽位。',
       ),
     );
   });
@@ -506,6 +530,29 @@ function inventorySections(data: Row): ReadableSection[] {
     false,
     false,
   );
+  const dresserItems = list(object(data.glamourDresser).itemIds);
+  for (const outfit of rows(object(data.glamourDresser).outfitSets)) {
+    const displayedIndex = dresserItems
+      .slice(0, number(outfit.slot))
+      .filter((id) => number(id)).length;
+    result.push(
+      table(
+        `glamourDresser-${displayedIndex}-components`,
+        `${itemName(number(outfit.itemId))} · 套装部件`,
+        [
+          ['slot', '部件位置'],
+          ['name', '物品名称'],
+          ['state', '缓存状态'],
+        ],
+        rows(outfit.components).map((component) => ({
+          slot: number(component.componentIndex) + 1,
+          name: itemName(number(component.itemId)),
+          state: component.isStored ? '已存入' : '缺少',
+        })),
+        '状态位1表示缺少该部件；部件编号按固定公开资源表关联，本地缓存可能与当前游戏状态不同。',
+      ),
+    );
+  }
   result.push(
     table(
       'cabinet',
@@ -556,8 +603,13 @@ function structuredSections(
     settingsCandidate: 'settings',
     historyValues: 'historyEntries',
     unknownValue: 'historyEntries',
-    timestampCandidate: 'historyEntries',
+    timestampCandidate:
+      data.recordUpdatedAtUnix !== undefined
+        ? 'recordUpdatedAtUnix'
+        : 'historyEntries',
     namedFlagsCandidate: 'namedFlags',
+    statisticsCandidate: 'yakumanHistory',
+    uiFlags: 'namedFlags',
   };
   const visibleKey = (key: string) =>
     !alternatives[key] || data[alternatives[key]] === undefined;
@@ -814,7 +866,8 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
           .map((id) => ({ name: named('TripleTriadCard', id) })),
       ),
     ];
-  if (filename === 'ACQ.DAT')
+  if (filename === 'ACQ.DAT') {
+    const usage = object(data.mainCommandUsage);
     return [
       table(
         'contacts',
@@ -822,27 +875,96 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
         [
           ['name', '角色名称'],
           ['worldName', '服务器'],
-          ['contentId', '角色 ID（候选）'],
+          ['contentId', '角色 ID'],
+          ['routeName', '回复路由'],
+          ['flagsRaw', '路由保存值'],
         ],
         rows(data.contacts).map((contact) => ({
           ...contact,
+          name: playerLabel(contact),
+          routeName:
+            object(contact.route).replyRoute === 'foray'
+              ? '特殊区域密语'
+              : object(contact.route).replyRoute === 'extended'
+                ? '扩展上下文密语'
+                : '普通密语',
           contentId:
-            object(object(contact.inferred).contentIdCandidate).hex ?? '未记录',
+            contact.contentIdHex ??
+            object(object(contact.inferred).contentIdCandidate).hex ??
+            '未记录',
         })),
         '本地历史联系人，名字和服务器可能已发生变化。',
       ),
-      table(
-        'contact-metadata',
-        '附加数值记录',
-        [
-          ['index', '记录序号'],
-          ['firstValue', '第一列保存值'],
-          ['secondValue', '第二列保存值'],
-        ],
-        rows(object(data.metadataBlock).entries),
-        '记录数量与两列边界已经核对；两列数值的业务用途尚未确认。',
-      ),
+      ...(data.lastReceivedTell
+        ? [
+            table(
+              'last-received-tell',
+              '最后收到密语的联系人',
+              [
+                ['name', '角色名称'],
+                ['worldName', '服务器'],
+                ['contentIdHex', '角色 ID'],
+              ],
+              [
+                {
+                  ...object(data.lastReceivedTell),
+                  name: playerLabel(object(data.lastReceivedTell)),
+                },
+              ],
+              '由原生特殊记录标记确认，与普通联系人历史单独保存。',
+            ),
+          ]
+        : []),
+      ...(data.mainCommandUsage
+        ? [
+            table(
+              'command-usage-window',
+              '系统指令统计周期',
+              [
+                ['field', '项目'],
+                ['value', '内容'],
+              ],
+              [
+                {
+                  field: '汇总截止时间',
+                  value: timestamp(usage.aggregationDeadlineUnix),
+                },
+                { field: '初始统计窗口', value: '7 天' },
+              ],
+            ),
+            table(
+              'contact-metadata',
+              '系统指令使用统计',
+              [
+                ['counterIndex', '统计索引'],
+                ['name', '指令（公开表关联）'],
+                ['useCount', '使用次数'],
+                ['failedUseCount', '其中失败次数'],
+              ],
+              rows(usage.entries).map((entry) => ({
+                ...entry,
+                name:
+                  entry.commandNamesCandidate ||
+                  `统计索引 ${entry.counterIndex}`,
+              })),
+              'ACQ中同时保存系统指令使用统计；次数由原生读写器与计数器确认，名称按固定公开MainCommand表关联。',
+            ),
+          ]
+        : [
+            table(
+              'contact-metadata',
+              '附加数值记录',
+              [
+                ['index', '记录序号'],
+                ['firstValue', '第一列保存值'],
+                ['secondValue', '第二列保存值'],
+              ],
+              rows(object(data.metadataBlock).entries),
+              '此布局尚未符合目标客户端固定78项的系统指令统计格式，原始值保留。',
+            ),
+          ]),
     ];
+  }
   if (filename === 'LOGFLTR.DAT')
     return rows(data.groups).map((group, index) =>
       table(
@@ -880,15 +1002,24 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
   if (filename === 'ADDON.DAT')
     return rows(data.datasets).flatMap((dataset, index) => {
       const entries = (records: unknown) =>
-        rows(records).map((entry) => ({
-          ...entry,
-          name:
-            addonNames[String(entry.addonName)] ??
-            entry.addonName ??
-            `未识别界面项（${entry.addonNameHashHex}）`,
-          scale: `${Math.round(number(entry.scale) * 100)}%`,
-          alpha: `${Math.round((number(entry.alpha) / 255) * 100)}%`,
-        }));
+        rows(records)
+          .filter((entry) => entry.isEmptyStorage !== true)
+          .map((entry): Row => ({
+            ...entry,
+            offset: entry.offset,
+            name: addonDisplayName(entry.addonName, entry.addonNameHashHex),
+            anchor: entry.alignmentName ?? entry.alignmentType,
+            elementSetting:
+              object(entry.elementSettings).kind === 'jobGauge'
+                ? object(entry.elementSettings).useSimpleGauge
+                  ? '简易量谱'
+                  : '标准量谱'
+                : object(entry.elementSettings).kind === 'hotbar'
+                  ? (object(entry.elementSettings).layoutName ?? '默认布局')
+                  : entry.elementFlags,
+            scale: `${Math.round(number(entry.scale) * 100)}%`,
+            alpha: `${Math.round((number(entry.alpha) / 255) * 100)}%`,
+          }));
       const columns: [string, string][] = [
         ['name', '界面元素'],
         ['x', 'X 坐标'],
@@ -897,15 +1028,40 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
         ['width', '宽度'],
         ['height', '高度'],
         ['alpha', '不透明度'],
+        ['anchor', '定位锚点'],
+        ['elementSetting', '界面专属设置'],
       ];
+      const section = (id: string, title: string, records: unknown) => {
+        const visible = entries(records);
+        return {
+          ...table(
+            id,
+            title,
+            id.startsWith('hud-')
+              ? [
+                  ...columns,
+                  ['keyboardMouse', '键鼠模式'],
+                  ['gamepad', '手柄模式'],
+                  ['override', '继承方式'],
+                ]
+              : columns,
+            visible.map((entry) => ({
+              ...entry,
+              keyboardMouse: entry.hudVisibleKeyboardMouse ? '显示' : '隐藏',
+              gamepad: entry.hudVisibleGamepad ? '显示' : '隐藏',
+              override: entry.flagsOnlyOverride ? '只覆盖界面设置' : '完整布局',
+            })),
+          ),
+          sourceKeys: visible.map((entry) => String(entry.offset)),
+        };
+      };
       return [
-        table(`ui-${index}`, '常规界面配置', columns, entries(dataset.entries)),
+        section(`ui-${index}`, '常规界面配置', dataset.entries),
         ...rows(dataset.layouts).map((layout, n) =>
-          table(
+          section(
             `hud-${index}-${n}`,
-            `HUD 布局 ${n + 1}`,
-            columns,
-            entries(layout.entries),
+            `HUD 布局 ${n + 1}${layout.name ? ' · ' + layout.name : ''}`,
+            layout.entries,
           ),
         ),
       ];
@@ -913,15 +1069,39 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
   if (filename === 'UISAVE.DAT')
     return rows(data.segments).flatMap((segment) => {
       const value = { ...object(segment.data) };
+      if (segment.id === 2 && Array.isArray(value.unmappedUiFlags))
+        value.unmappedUiFlags = rows(value.unmappedUiFlags).filter(
+          (entry) => number(entry.value) !== 0,
+        );
+      if (segment.id === 11 && Array.isArray(value.chunks))
+        value.chunks = rows(value.chunks).map((chunk) => {
+          const content = object(chunk.data);
+          return Array.isArray(content.yakumanHistory)
+            ? {
+                ...chunk,
+                data: {
+                  ...content,
+                  yakumanHistory: rows(content.yakumanHistory).filter(
+                    (entry) => entry.hasRecord,
+                  ),
+                },
+              }
+            : chunk;
+        });
       if (segment.id === 31)
         value.termFilters = rows(value.termFilters).filter((row) => row.term);
       if (segment.id === 0)
-        value.records = rows(value.records).filter(
-          (row) =>
-            row.recipientName ||
-            number(row.gil) ||
-            rows(row.items).some((item) => number(item.itemId)),
-        );
+        value.records = rows(value.records)
+          .filter(
+            (row) =>
+              row.recipientName ||
+              number(row.gil) ||
+              rows(row.items).some((item) => number(item.itemId)),
+          )
+          .map((row) => ({
+            ...row,
+            recipientName: playerLabel(row, 'recipientName'),
+          }));
       if (segment.id === 1)
         value.tasks = rows(value.tasks).filter(
           (row) => row.retainerId && row.retainerId !== '0',
@@ -947,62 +1127,102 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
           ...section,
           sourceId: id,
         });
+        const cache = (key: string, title: string) =>
+          make(
+            table(
+              key,
+              title,
+              [
+                ['index', '保存槽位'],
+                ['name', '角色名称'],
+                ['contentId', '角色 ID'],
+                ['world', '服务器'],
+              ],
+              rows(object(value[key]).entries).map((entry) => ({
+                ...entry,
+                name: playerLabel(entry),
+                index: number(entry.index) + 1,
+                world: playerWorld(entry) || '未知服务器',
+              })),
+            ),
+          );
         return [
           make(
             table(
               'social-labels',
-              '社交分组名称',
+              '好友分组名称',
               [
-                ['index', '保存槽位'],
+                ['index', '分组'],
                 ['name', '名称'],
               ],
-              rows(value.groupLabels)
-                .filter((entry) => entry.name)
-                .map((entry) => ({ ...entry, index: number(entry.index) + 1 })),
-              '名称及存储位置已确认；分组的具体业务分类仍待核对。',
+              rows(value.friendGroups ?? value.groupLabels).map((entry) => ({
+                ...entry,
+                index: number(entry.index) + 1,
+                name: entry.name || `分组 ${number(entry.index) + 1}`,
+              })),
             ),
           ),
           make(
             table(
               'social-contacts',
-              '联系人缓存',
+              '联系人历史',
               [
                 ['index', '保存槽位'],
-                ['name', '名称'],
-                ['identityIdRaw', '身份保存值'],
-                ['worldIdRaw', '服务器保存值'],
+                ['name', '角色名称'],
+                ['contentId', '角色 ID'],
+                ['world', '服务器'],
+                ['job', '职业'],
               ],
-              rows(value.contactRecords)
+              rows(value.recentContacts ?? value.contactRecords)
                 .filter(
                   (entry) =>
                     entry.name ||
-                    entry.identityIdRaw !== '0' ||
-                    number(entry.worldIdRaw),
+                    (entry.contentId ?? entry.identityIdRaw) !== '0' ||
+                    number(entry.worldId),
                 )
-                .map((entry) => ({ ...entry, index: number(entry.index) + 1 })),
-              '身份值的ContentId绑定尚未证实，保持原值而不作角色身份匹配。',
+                .map((entry) => ({
+                  ...entry,
+                  name: playerLabel(entry),
+                  index: number(entry.index) + 1,
+                  contentId: entry.contentId ?? entry.identityIdRaw,
+                  world: playerWorld(entry) || '未知服务器',
+                  job: number(entry.classJobId)
+                    ? (gameName('ClassJob', number(entry.classJobId)) ??
+                      entry.classJobId)
+                    : '未记录',
+                })),
             ),
           ),
           make(
             table(
               'social-list',
-              '分列社交记录（列表分类待核对）',
+              '黑名单',
               [
                 ['index', '记录'],
-                ['name', '名称'],
+                ['name', '角色名称'],
                 ['comment', '备注'],
-                ['identityIdRaw', '身份保存值'],
-                ['worldIdRaw', '服务器保存值'],
-                ['recordIdRaw', '记录键'],
-                ['flagRaw', '保存标志'],
+                ['identityType', '屏蔽范围'],
+                ['accountId', '账号 ID'],
+                ['contentId', '角色 ID'],
+                ['world', '服务器'],
+                ['serverRecordId', '服务器记录编号'],
               ],
-              rows(object(value.socialList).entries).map((entry) => ({
-                ...entry,
-                index: number(entry.index) + 1,
-              })),
-              '名称、备注、数组边界与字段宽度已确认；列表类别、身份类型及标志用途仍保留待核对。',
+              rows(object(value.blacklist ?? value.socialList).entries).map(
+                (entry) => ({
+                  ...entry,
+                  name: playerLabel(entry),
+                  index: number(entry.index) + 1,
+                  identityType:
+                    entry.identityKind === 'account' ? '账号' : '角色',
+                  world: playerWorld(entry) || '未知服务器',
+                  accountId: entry.accountId ?? '未保存',
+                  contentId: entry.contentId ?? '未保存',
+                }),
+              ),
             ),
           ),
+          cache('partyMemberCache', '队伍成员来源缓存'),
+          cache('characterNameCache', '角色名称缓存'),
           make(
             table(
               'mute-list',
@@ -1012,11 +1232,13 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
                 ['name', '名称'],
                 ['comment', '备注'],
                 ['accountId', '账号 ID'],
-                ['worldId', '服务器'],
+                ['world', '服务器'],
               ],
               rows(object(value.muteList).entries).map((entry) => ({
                 ...entry,
+                name: playerLabel(entry),
                 index: number(entry.index) + 1,
+                world: playerWorld(entry) || '未知服务器',
               })),
             ),
           ),
@@ -1106,7 +1328,11 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
           ...section,
           sourceId: id,
         });
-        const command = (type: unknown, commandId: unknown) => {
+        const command = (
+          type: unknown,
+          commandId: unknown,
+          linkedName?: unknown,
+        ) => {
           const typeId = number(type);
           const storedId = number(commandId);
           const description = describeHotbarCommand(
@@ -1116,6 +1342,9 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
           return {
             typeLabel: description.commandTypeLabel,
             name:
+              (typeof linkedName === 'string' && linkedName
+                ? linkedName
+                : null) ??
               description.commandName ??
               `未收录名称（类型 ${typeId} / 编号 ${storedId}）`,
           };
@@ -1176,7 +1405,11 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
                         typeLabel: '默认图标',
                         name: `快捷面板 ${index + 1} 默认图标`,
                       }
-                    : command(panel.iconCommandType, panel.iconCommandId)),
+                    : command(
+                        panel.iconCommandType,
+                        panel.iconCommandId,
+                        panel.iconCommandName,
+                      )),
                   iconCommandType: panel.iconCommandType,
                   iconCommandId: panel.iconCommandId,
                   defaultIconId: useDefault ? panel.defaultIconId : '不适用',
@@ -1205,7 +1438,11 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
                   )
                   .map((entry) => ({
                     ...entry,
-                    ...command(entry.commandType, entry.commandId),
+                    ...command(
+                      entry.commandType,
+                      entry.commandId,
+                      entry.commandName,
+                    ),
                     slot: number(entry.slot) + 1,
                   })),
               ),
@@ -1917,8 +2154,8 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
               [
                 ['petName', '宠物'],
                 ['sizeName', '大小'],
-                ['isNewPetSeen', '已查看（对应待核对）'],
-                ['mirageName', '外形（对应待核对）'],
+                ['isNewPetSeen', '已查看'],
+                ['mirageName', '外形'],
                 ['petId', '原始编号'],
               ],
               rows(value.petSettings),
@@ -2046,9 +2283,9 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
           ['name', '角色名称'],
           ['worldId', '服务器'],
           ['contentIdHex', '角色 ID'],
-          ['timestampInteger', '时间保存值（用途未确认）'],
+          ['recordUpdatedAtUnix', '配置记录更新时间'],
         ],
-        [data],
+        [{ ...data, name: playerLabel(data) }],
         '这是本地缓存中的名字，不保证是改名后的当前名字。',
       ),
     ];

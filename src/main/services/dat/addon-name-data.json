@@ -1,0 +1,3008 @@
+{
+  "source": {
+    "executableSha256": "958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9",
+    "hashAlgorithm": "CRC-32/ISO-HDLC of UTF-8 addonName + _a",
+    "nameBasis": "Exact name hash matches against literal strings or indexed name formats in the supplied EXE. sourceOffset is a file offset; format entries record the formatting string and index. No game execution.",
+    "labelBasis": "Application-authored Chinese explanations; not text extracted from the game localization."
+  },
+  "names": {
+    "00a5a386": {
+      "name": "MiragePrismPrismSetConvertC",
+      "sourceOffset": 34788136
+    },
+    "00ea5532": {
+      "name": "RetainerCharacter",
+      "sourceOffset": 34781080
+    },
+    "021de63c": {
+      "name": "GcArmyTraining",
+      "sourceOffset": 34784744
+    },
+    "02329e54": {
+      "name": "MuteList",
+      "sourceOffset": 34776144
+    },
+    "02576f87": {
+      "name": "ConfigKeybind",
+      "sourceOffset": 34777336
+    },
+    "03906339": {
+      "name": "MKDRelicGrowth",
+      "sourceOffset": 34794568
+    },
+    "03bfbf56": {
+      "name": "LetterAddress",
+      "sourceOffset": 34782064
+    },
+    "04acf5d5": {
+      "name": "MJIBuildingMove",
+      "sourceOffset": 34792560
+    },
+    "04d81e56": {
+      "name": "RetainerSell",
+      "sourceOffset": 34776944
+    },
+    "060c79db": {
+      "name": "MiniGameMiner",
+      "sourceOffset": 34783912
+    },
+    "06d3b6be": {
+      "name": "AddonContextMenuTitle",
+      "sourceOffset": 34780528
+    },
+    "07651bc7": {
+      "name": "TofuSaveDialog",
+      "sourceOffset": 34792960
+    },
+    "076f596b": {
+      "name": "_TargetInfoBuffDebuff",
+      "sourceOffset": 34795968
+    },
+    "07a3988f": {
+      "name": "ContentsFinderStatus",
+      "sourceOffset": 34777768
+    },
+    "0857bda0": {
+      "name": "CircleBookQuestion",
+      "sourceOffset": 34790104
+    },
+    "086c7653": {
+      "name": "AlarmSettings",
+      "sourceOffset": 34788984
+    },
+    "0a08aa53": {
+      "name": "LotteryWeeklyRewardList",
+      "sourceOffset": 34782520
+    },
+    "0ae5fcd1": {
+      "name": "MiragePrismMiragePlateConfirm",
+      "sourceOffset": 34788320
+    },
+    "0b220709": {
+      "name": "ChatLog",
+      "sourceOffset": 34775760
+    },
+    "0b664284": {
+      "name": "MateriaRetrieveDialog",
+      "sourceOffset": 34777968
+    },
+    "0b87949d": {
+      "name": "RetainerListSort",
+      "sourceOffset": 34789608
+    },
+    "0bc5a49f": {
+      "name": "PvPCharacter",
+      "sourceOffset": 34786944
+    },
+    "0da914a7": {
+      "name": "MiragePrismPrismItemDetail",
+      "sourceOffset": 34788264
+    },
+    "0e16f6a9": {
+      "name": "QuestRedo",
+      "sourceOffset": 34789920
+    },
+    "0e67e82a": {
+      "name": "LovmTypeInfo",
+      "sourceOffset": 34783728
+    },
+    "0e680ec8": {
+      "name": "Marker",
+      "sourceOffset": 34774300
+    },
+    "0e98e437": {
+      "name": "ContentsFinderReady",
+      "sourceOffset": 34777816
+    },
+    "0fc06e49": {
+      "name": "RetainerSellList",
+      "sourceOffset": 34776960
+    },
+    "1012767e": {
+      "name": "JobHudGFF1",
+      "sourceOffset": 34799000
+    },
+    "1047f0e1": {
+      "name": "ManeuversHeader",
+      "sourceOffset": 34787232
+    },
+    "11884609": {
+      "name": "CharaCardPermissionSetting",
+      "sourceOffset": 34791904
+    },
+    "118e89ba": {
+      "name": "InclusionShop",
+      "sourceOffset": 34790944
+    },
+    "11d01c49": {
+      "name": "JobHudGFF0",
+      "sourceOffset": 34798984
+    },
+    "12120f4e": {
+      "name": "Repair",
+      "sourceOffset": 34773940
+    },
+    "128635a9": {
+      "name": "SelectOkTitle",
+      "sourceOffset": 34781816
+    },
+    "128cbbe9": {
+      "name": "ColorantColoring",
+      "sourceOffset": 34778080
+    },
+    "130957f3": {
+      "name": "TofuConfig",
+      "sourceOffset": 34792976
+    },
+    "13c4ef29": {
+      "name": "VoteMvp",
+      "sourceOffset": 34780808
+    },
+    "141587fb": {
+      "name": "BannerPreview",
+      "sourceOffset": 34791656
+    },
+    "143583b3": {
+      "name": "DawnStoryMemberSelect",
+      "sourceOffset": 34789824
+    },
+    "14449b3f": {
+      "name": "CharaCardClassJobSetting",
+      "sourceOffset": 34791840
+    },
+    "1632f1e0": {
+      "name": "GearSetList",
+      "sourceOffset": 34778248
+    },
+    "167a0a77": {
+      "name": "XBMMonsterNotebook",
+      "sourceOffset": 34795328
+    },
+    "17203330": {
+      "name": "ShopExchangeCurrency",
+      "sourceOffset": 34780160
+    },
+    "18f2e6d8": {
+      "name": "ItemSearchResult",
+      "sourceOffset": 34777400
+    },
+    "1a3fd9cf": {
+      "name": "QuickPanel",
+      "sourceOffset": 34794680
+    },
+    "1a487586": {
+      "name": "HudLayoutCurrentBuffStatus",
+      "sourceOffset": 34777200
+    },
+    "1b3a1bec": {
+      "name": "InventoryExpansion",
+      "sourceOffset": 34789096
+    },
+    "1b45d60c": {
+      "name": "SystemMenu",
+      "sourceOffset": 34780224
+    },
+    "1c15e20f": {
+      "name": "_BagWidget",
+      "sourceOffset": 34795936
+    },
+    "1c6b040f": {
+      "name": "CharacterTitle",
+      "sourceOffset": 34783576
+    },
+    "1cc6e4da": {
+      "name": "_StatusCustom2",
+      "sourceOffset": 34795896
+    },
+    "1cf6cdff": {
+      "name": "Social",
+      "sourceOffset": 34773972
+    },
+    "1d048eed": {
+      "name": "_StatusCustom3",
+      "sourceOffset": 34795912
+    },
+    "1d09afeb": {
+      "name": "AllianceMemberList",
+      "sourceOffset": 34780864
+    },
+    "1e805a83": {
+      "name": "_StatusCustom1",
+      "sourceOffset": 34795880
+    },
+    "1e835124": {
+      "name": "JournalResult",
+      "sourceOffset": 34775936
+    },
+    "1f02c137": {
+      "name": "MJICraftScheduleSetting",
+      "sourceOffset": 34792192
+    },
+    "1f4230b4": {
+      "name": "_StatusCustom0",
+      "sourceOffset": 34795864
+    },
+    "1f72de02": {
+      "name": "LetterList",
+      "sourceOffset": 34776448
+    },
+    "1f753520": {
+      "name": "CircleList",
+      "sourceOffset": 34790024
+    },
+    "20a1eefa": {
+      "name": "Macro",
+      "sourceOffset": 34774292
+    },
+    "21e53cce": {
+      "name": "_Exp",
+      "sourceOffset": 34795928
+    },
+    "21f0cb71": {
+      "name": "TripleTriadResult",
+      "sourceOffset": 34782224
+    },
+    "21f6f3eb": {
+      "name": "MJISearchArea",
+      "sourceOffset": 34792360
+    },
+    "22080d11": {
+      "name": "MJIFarmManagement",
+      "sourceOffset": 34792288
+    },
+    "22576987": {
+      "name": "CameraSetting",
+      "sourceOffset": 34785768
+    },
+    "22db105e": {
+      "name": "Alarm",
+      "sourceOffset": 34775092
+    },
+    "23815eb0": {
+      "name": "RecommendEquip",
+      "sourceOffset": 34784440
+    },
+    "238b1e60": {
+      "name": "CompanyCraftSupply",
+      "sourceOffset": 34783248
+    },
+    "239ca475": {
+      "name": "WeeklyBingoContentList",
+      "sourceOffset": 34785232
+    },
+    "23ad8bf9": {
+      "name": "WorldTravelFinderStatus",
+      "sourceOffset": 34789472
+    },
+    "24267828": {
+      "name": "TripleTriadSelDeck",
+      "sourceOffset": 34782776
+    },
+    "242ac432": {
+      "name": "SatisfactionSupplyResult",
+      "sourceOffset": 34786272
+    },
+    "245414ab": {
+      "name": "ItemInspectionList",
+      "sourceOffset": 34785992
+    },
+    "249ec8aa": {
+      "name": "LovmMiniMap",
+      "sourceOffset": 34783808
+    },
+    "25ea3e85": {
+      "name": "EasterStartCountdown",
+      "sourceOffset": 34791376
+    },
+    "25f0cb94": {
+      "name": "CircleFinderSetting",
+      "sourceOffset": 34790264
+    },
+    "26007735": {
+      "name": "LovmPartyList",
+      "sourceOffset": 34783696
+    },
+    "263276b9": {
+      "name": "HWDGathereInspect",
+      "sourceOffset": 34790744
+    },
+    "275b89cf": {
+      "name": "GcArmyMenberProfile",
+      "sourceOffset": 34784512
+    },
+    "277a81e0": {
+      "name": "FieldMarker",
+      "sourceOffset": 34781048
+    },
+    "277f2f55": {
+      "name": "GrandCompanyRankUp",
+      "sourceOffset": 34778208
+    },
+    "278c3e17": {
+      "name": "LetterEditor",
+      "sourceOffset": 34776480
+    },
+    "285ae9af": {
+      "name": "ItemSearch",
+      "sourceOffset": 34777384
+    },
+    "2901934d": {
+      "name": "FateReward",
+      "sourceOffset": 34777512
+    },
+    "2943729a": {
+      "name": "_AllianceList1",
+      "sourceOffset": 34796448
+    },
+    "29e7f618": {
+      "name": "RetainerList",
+      "sourceOffset": 34789592
+    },
+    "2b05ccc3": {
+      "name": "_AllianceList2",
+      "sourceOffset": 34796464
+    },
+    "2b1f3f7f": {
+      "name": "XBMMonsterNotebookFilterSetting",
+      "sourceOffset": 34795384
+    },
+    "2c2d0162": {
+      "name": "WKSScoreList",
+      "sourceOffset": 34794200
+    },
+    "2d327d8e": {
+      "name": "PvPFrontlineHeader",
+      "sourceOffset": 34785632
+    },
+    "2d85fe47": {
+      "name": "DeepDungeonScore",
+      "sourceOffset": 34785016
+    },
+    "2ec3640d": {
+      "name": "Guide",
+      "sourceOffset": 34775420
+    },
+    "2f3a0b6a": {
+      "name": "CollectablesShop",
+      "sourceOffset": 34790960
+    },
+    "2f82fd0b": {
+      "name": "FriendGroupEdit",
+      "sourceOffset": 34782080
+    },
+    "2fe9e3d3": {
+      "name": "SatisfactionSupply",
+      "sourceOffset": 34786248
+    },
+    "30748231": {
+      "name": "PvPMKSHeader",
+      "sourceOffset": 34785312
+    },
+    "31204d8e": {
+      "name": "DescriptionDD",
+      "sourceOffset": 34788968
+    },
+    "3152b2c5": {
+      "name": "_LovmTargetInfo",
+      "sourceOffset": 34791976
+    },
+    "31dba588": {
+      "name": "MJICraftScheduleMaterialList",
+      "sourceOffset": 34792160
+    },
+    "321e48bd": {
+      "name": "MiniGameAimg",
+      "sourceOffset": 34783952
+    },
+    "326ed97e": {
+      "name": "Dawn",
+      "sourceOffset": 34789784
+    },
+    "3340e3ac": {
+      "name": "MJICraftMaterialConfirmation",
+      "sourceOffset": 34792032
+    },
+    "34298c40": {
+      "name": "InventoryEventGrid2",
+      "sourceOffset": 35787688,
+      "format": "InventoryEventGrid%d",
+      "index": 2
+    },
+    "345cc282": {
+      "name": "PvpProfile",
+      "sourceOffset": 34780712
+    },
+    "3497f2f8": {
+      "name": "BeginnersMansionTutorial",
+      "sourceOffset": 34784200
+    },
+    "34bf98af": {
+      "name": "PvPFrontlineGauge",
+      "sourceOffset": 34785608
+    },
+    "366f3219": {
+      "name": "InventoryEventGrid1",
+      "sourceOffset": 35787688,
+      "format": "InventoryEventGrid%d",
+      "index": 1
+    },
+    "3703c4a0": {
+      "name": "GrandCompanyExchange",
+      "sourceOffset": 34777544
+    },
+    "37416124": {
+      "name": "WKSMechaOperationEntryAccept",
+      "sourceOffset": 34794168
+    },
+    "379a2a78": {
+      "name": "DeepDungeonStatus",
+      "sourceOffset": 34784968
+    },
+    "37ad582e": {
+      "name": "InventoryEventGrid0",
+      "sourceOffset": 35787688,
+      "format": "InventoryEventGrid%d",
+      "index": 0
+    },
+    "37b3180a": {
+      "name": "InputString",
+      "sourceOffset": 34775864
+    },
+    "37c61b5b": {
+      "name": "HousingMenu",
+      "sourceOffset": 34780432
+    },
+    "382c637d": {
+      "name": "Achievement",
+      "sourceOffset": 34777632
+    },
+    "3877ec11": {
+      "name": "BannerMIP",
+      "sourceOffset": 34793064
+    },
+    "396eb572": {
+      "name": "DeepDungeonMap",
+      "sourceOffset": 34784952
+    },
+    "3a312f0d": {
+      "name": "JobHudSMN1",
+      "sourceOffset": 34798664
+    },
+    "3a715ebd": {
+      "name": "MJIMinionNoteBook",
+      "sourceOffset": 34792536
+    },
+    "3b26db7a": {
+      "name": "FGSHudGoal",
+      "sourceOffset": 34793336
+    },
+    "3bbbbbcf": {
+      "name": "AOZNotebook",
+      "sourceOffset": 34789208
+    },
+    "3bf3453a": {
+      "name": "JobHudSMN0",
+      "sourceOffset": 34798680
+    },
+    "3d425039": {
+      "name": "_PartyList",
+      "sourceOffset": 34796432
+    },
+    "3e338fb9": {
+      "name": "GoldSaucerReward",
+      "sourceOffset": 34782096
+    },
+    "3ec5da24": {
+      "name": "GcArmyChangeTactic",
+      "sourceOffset": 34784584
+    },
+    "3f3a62d9": {
+      "name": "TripleTriad",
+      "sourceOffset": 34782184
+    },
+    "3f73d42e": {
+      "name": "VVDFinder",
+      "sourceOffset": 34792808
+    },
+    "40221fd7": {
+      "name": "AchievementSetting",
+      "sourceOffset": 34777664
+    },
+    "4033e60f": {
+      "name": "Description",
+      "sourceOffset": 34788936
+    },
+    "40cb4e73": {
+      "name": "MJICraftSales",
+      "sourceOffset": 34792064
+    },
+    "41149791": {
+      "name": "MJIGatheringHouse",
+      "sourceOffset": 34792336
+    },
+    "4180e455": {
+      "name": "_TofuEditObjectEdit",
+      "sourceOffset": 34796912
+    },
+    "42cbe75f": {
+      "name": "ItemDetail",
+      "sourceOffset": 34776696
+    },
+    "43161aa2": {
+      "name": "_Money",
+      "sourceOffset": 34775516
+    },
+    "43b0507e": {
+      "name": "MYCWarResultNotebook",
+      "sourceOffset": 34790984
+    },
+    "44d47b33": {
+      "name": "OrchestrionPlayList",
+      "sourceOffset": 34785096
+    },
+    "45403c69": {
+      "name": "Bait",
+      "sourceOffset": 34780216
+    },
+    "465e2306": {
+      "name": "ManeuversTeamInfo",
+      "sourceOffset": 34787256
+    },
+    "4661eaca": {
+      "name": "ActionDetail",
+      "sourceOffset": 34776736
+    },
+    "467967b5": {
+      "name": "AddonContextSub",
+      "sourceOffset": 34784360
+    },
+    "48064d03": {
+      "name": "NeedGreed",
+      "sourceOffset": 34775992
+    },
+    "485a73ed": {
+      "name": "WebLauncher",
+      "sourceOffset": 34789976
+    },
+    "48885c20": {
+      "name": "ContentsInfo",
+      "sourceOffset": 34779360
+    },
+    "490defaa": {
+      "name": "JournalRewardItem",
+      "sourceOffset": 34775952
+    },
+    "4a243285": {
+      "name": "EurekaElementalEdit",
+      "sourceOffset": 34787712
+    },
+    "4a3c3250": {
+      "name": "TreasureHighLow",
+      "sourceOffset": 34787200
+    },
+    "4a569616": {
+      "name": "_Status",
+      "sourceOffset": 34795856
+    },
+    "4ae662bd": {
+      "name": "CircleFinder",
+      "sourceOffset": 34790224
+    },
+    "4c3f85fb": {
+      "name": "DeepDungeonInspect",
+      "sourceOffset": 34784928
+    },
+    "4d05669b": {
+      "name": "GrandCompanySupplyReward",
+      "sourceOffset": 34779016
+    },
+    "4d0c97cd": {
+      "name": "FrontlineRecord",
+      "sourceOffset": 34783472
+    },
+    "4e7d719f": {
+      "name": "ShopExchangeCurrencyDialog",
+      "sourceOffset": 34786328
+    },
+    "4f449451": {
+      "name": "MJICraftSchedule",
+      "sourceOffset": 34792080
+    },
+    "4f60b3fa": {
+      "name": "Request",
+      "sourceOffset": 34776784
+    },
+    "4fa285c1": {
+      "name": "AdventureNotice",
+      "sourceOffset": 34791464
+    },
+    "4fd15afd": {
+      "name": "MiragePrismMiragePlate",
+      "sourceOffset": 34788296
+    },
+    "4ff8a750": {
+      "name": "BannerList",
+      "sourceOffset": 34791544
+    },
+    "501196d3": {
+      "name": "Cabinet",
+      "sourceOffset": 34777704
+    },
+    "5055e218": {
+      "name": "GcArmyExpedition",
+      "sourceOffset": 34784696
+    },
+    "50b685de": {
+      "name": "RoadStoneResult",
+      "sourceOffset": 34787480
+    },
+    "50bf2f3b": {
+      "name": "CraftActionSimulator",
+      "sourceOffset": 34790656
+    },
+    "50d54c42": {
+      "name": "HudLayoutSetCopy",
+      "sourceOffset": 34777144
+    },
+    "51b67c50": {
+      "name": "ConfigChatLogNameSetting",
+      "sourceOffset": 34792760
+    },
+    "52d3c93a": {
+      "name": "ReplayReadyCheck",
+      "sourceOffset": 34788456
+    },
+    "53c0c45f": {
+      "name": "WKSMechaOperationEntryUI",
+      "sourceOffset": 34794104
+    },
+    "54b8c68a": {
+      "name": "_ActionContents",
+      "sourceOffset": 34796328
+    },
+    "55809927": {
+      "name": "Trade",
+      "sourceOffset": 34773964
+    },
+    "559ab5fa": {
+      "name": "OrnamentNoteBook",
+      "sourceOffset": 34791216
+    },
+    "55a67149": {
+      "name": "ColorantEquipment",
+      "sourceOffset": 34778056
+    },
+    "565f6798": {
+      "name": "InputNumeric",
+      "sourceOffset": 34775848
+    },
+    "584acef6": {
+      "name": "LookingForGroupSelectRole",
+      "sourceOffset": 34780664
+    },
+    "5876c26e": {
+      "name": "MKDSettings",
+      "sourceOffset": 34794520
+    },
+    "58aa618d": {
+      "name": "HowTo",
+      "sourceOffset": 34735628
+    },
+    "58bd7fe5": {
+      "name": "FGSEnterDialog",
+      "sourceOffset": 34793424
+    },
+    "590dc46f": {
+      "name": "InventoryEventGrid",
+      "sourceOffset": 35791320
+    },
+    "59209613": {
+      "name": "GoldSaucerInfo",
+      "sourceOffset": 34782392
+    },
+    "5962d930": {
+      "name": "MKDInfo",
+      "sourceOffset": 34794456
+    },
+    "59a92cb1": {
+      "name": "SynthesisSimple",
+      "sourceOffset": 34776768
+    },
+    "5a6f2938": {
+      "name": "BuddyInspect",
+      "sourceOffset": 34780552
+    },
+    "5a7e0353": {
+      "name": "ShopExchangeItemDialog",
+      "sourceOffset": 34781624
+    },
+    "5a882422": {
+      "name": "MerchantEquipSelect",
+      "sourceOffset": 34789040
+    },
+    "5b0133f9": {
+      "name": "EurekaElementalHud",
+      "sourceOffset": 34787688
+    },
+    "5b16067b": {
+      "name": "TeleportSetting",
+      "sourceOffset": 34781920
+    },
+    "5b760bec": {
+      "name": "MYCBattleAreaInfo",
+      "sourceOffset": 34791112
+    },
+    "5bdccded": {
+      "name": "MateriaAttach",
+      "sourceOffset": 34777904
+    },
+    "5c5d1ca3": {
+      "name": "HudLayoutCurrentTarget",
+      "sourceOffset": 34777232
+    },
+    "5d1d7fbd": {
+      "name": "BeginnerChatList",
+      "sourceOffset": 34784288
+    },
+    "5ecafee2": {
+      "name": "WKSRecipeNotebook",
+      "sourceOffset": 34794080
+    },
+    "5f5a77c0": {
+      "name": "GcArmyChangeTrait",
+      "sourceOffset": 34784560
+    },
+    "5fd67952": {
+      "name": "InventoryLarge",
+      "sourceOffset": 34781504
+    },
+    "61b9392c": {
+      "name": "DeepDungeonResult",
+      "sourceOffset": 34785952
+    },
+    "61e2fbaa": {
+      "name": "QuickPanelSetting",
+      "sourceOffset": 34794696
+    },
+    "622da090": {
+      "name": "HousingEditInterior",
+      "sourceOffset": 34780296
+    },
+    "62a0dc33": {
+      "name": "TofuPreview",
+      "sourceOffset": 34792872
+    },
+    "62aaf5be": {
+      "name": "PcSearchSelectClass",
+      "sourceOffset": 34776296
+    },
+    "62bcc272": {
+      "name": "InventoryBuddy2",
+      "sourceOffset": 34787976
+    },
+    "635638e6": {
+      "name": "VoteKickReply",
+      "sourceOffset": 34780832
+    },
+    "6361bf2d": {
+      "name": "OrchestrionINN",
+      "sourceOffset": 34785752
+    },
+    "63bc4949": {
+      "name": "MJIHud",
+      "sourceOffset": 34775036
+    },
+    "6406639f": {
+      "name": "BannerUpdateView",
+      "sourceOffset": 34791576
+    },
+    "6422230f": {
+      "name": "InventoryEventGrid0E",
+      "sourceOffset": 35792640,
+      "format": "InventoryEventGrid%dE",
+      "index": 0
+    },
+    "64286a21": {
+      "name": "MacroTextCommandList",
+      "sourceOffset": 34781368
+    },
+    "647931d8": {
+      "name": "ConfigLogFilter",
+      "sourceOffset": 34777296
+    },
+    "64f21645": {
+      "name": "ContactList",
+      "sourceOffset": 34786144
+    },
+    "656c8fe2": {
+      "name": "IKDSchedule",
+      "sourceOffset": 34790864
+    },
+    "65f56bea": {
+      "name": "HWDSupply",
+      "sourceOffset": 34790712
+    },
+    "661bff4f": {
+      "name": "MJIMinionManagement",
+      "sourceOffset": 34792512
+    },
+    "6665735d": {
+      "name": "_ActionDoubleCrossL",
+      "sourceOffset": 34796344
+    },
+    "666cc634": {
+      "name": "FreeCompanyCreditShop",
+      "sourceOffset": 34783312
+    },
+    "66b1c3fd": {
+      "name": "InventoryEvent",
+      "sourceOffset": 34776056
+    },
+    "66d9022d": {
+      "name": "HousingSelectRoom",
+      "sourceOffset": 34781520
+    },
+    "66fcdfa6": {
+      "name": "DawnStory",
+      "sourceOffset": 34789808
+    },
+    "67dc9ec1": {
+      "name": "DeepDungeonMenu",
+      "sourceOffset": 34785936
+    },
+    "6a6cddba": {
+      "name": "GcArmyExpeditionResult",
+      "sourceOffset": 34784720
+    },
+    "6a6f9328": {
+      "name": "RetainerItemTransferList",
+      "sourceOffset": 34781192
+    },
+    "6a7bfe26": {
+      "name": "LotteryWeeklyInput",
+      "sourceOffset": 34782472
+    },
+    "6acfb6ce": {
+      "name": "LotteryDaily",
+      "sourceOffset": 34782360
+    },
+    "6b206a21": {
+      "name": "ReconstructionBox",
+      "sourceOffset": 34788808
+    },
+    "6bc74402": {
+      "name": "ShopExchangeItem",
+      "sourceOffset": 34780136
+    },
+    "6cb88c64": {
+      "name": "CabinetWithdraw",
+      "sourceOffset": 34779048
+    },
+    "6cd4313e": {
+      "name": "JobHudNIN1v70",
+      "sourceOffset": 34798760
+    },
+    "6cff2c42": {
+      "name": "FreeCompanyRights",
+      "sourceOffset": 34779128
+    },
+    "6dbe50fb": {
+      "name": "LovmQueueList",
+      "sourceOffset": 34783712
+    },
+    "6f5e1aae": {
+      "name": "TreasureMap",
+      "sourceOffset": 34780776
+    },
+    "6f64f274": {
+      "name": "TurnBreakGame",
+      "sourceOffset": 34793136
+    },
+    "6f714ddf": {
+      "name": "WKSToolCustomize",
+      "sourceOffset": 34794368
+    },
+    "6fc3c334": {
+      "name": "LotteryWeeklyHistory",
+      "sourceOffset": 34782496
+    },
+    "709a8e92": {
+      "name": "PvpWelcome",
+      "sourceOffset": 34787072
+    },
+    "70ddfd27": {
+      "name": "_ActionDoubleCrossR",
+      "sourceOffset": 34796368
+    },
+    "713bf2bf": {
+      "name": "JobHudNIN0",
+      "sourceOffset": 34798776
+    },
+    "713ddec7": {
+      "name": "HousingSignBoard",
+      "sourceOffset": 34780408
+    },
+    "7159021b": {
+      "name": "_NaviMap",
+      "sourceOffset": 34796120
+    },
+    "71e8e177": {
+      "name": "GcArmyCapture",
+      "sourceOffset": 34784760
+    },
+    "7251ac33": {
+      "name": "JobHudMNK0",
+      "sourceOffset": 34798472
+    },
+    "72773625": {
+      "name": "MerchantShop",
+      "sourceOffset": 34789080
+    },
+    "72822c98": {
+      "name": "MoogleCollectionRewardList",
+      "sourceOffset": 34793256
+    },
+    "72e6333e": {
+      "name": "GroupPoseGuide",
+      "sourceOffset": 34785808
+    },
+    "73094a56": {
+      "name": "TeleportHousingFriend",
+      "sourceOffset": 34787936
+    },
+    "732b4862": {
+      "name": "RetainerHistory",
+      "sourceOffset": 34779784
+    },
+    "73612f41": {
+      "name": "HowToNotice",
+      "sourceOffset": 34777024
+    },
+    "7393c604": {
+      "name": "JobHudMNK1",
+      "sourceOffset": 34798456
+    },
+    "73e9df1c": {
+      "name": "BlackList",
+      "sourceOffset": 34776104
+    },
+    "74312791": {
+      "name": "IKDResult",
+      "sourceOffset": 34790912
+    },
+    "745641de": {
+      "name": "BuddyEquipList",
+      "sourceOffset": 34779800
+    },
+    "74770dc8": {
+      "name": "ActionMenuActionSetting",
+      "sourceOffset": 34776648
+    },
+    "74c75457": {
+      "name": "WKSMissionInfomation",
+      "sourceOffset": 34794056
+    },
+    "75211966": {
+      "name": "Synthesis",
+      "sourceOffset": 34776752
+    },
+    "7568d92a": {
+      "name": "MiragePrismRemove",
+      "sourceOffset": 34778032
+    },
+    "760521ab": {
+      "name": "WeatherReport",
+      "sourceOffset": 34782000
+    },
+    "76245d9e": {
+      "name": "MJIPouch",
+      "sourceOffset": 34791936
+    },
+    "7685861f": {
+      "name": "ItemHistory",
+      "sourceOffset": 34777448
+    },
+    "775c7e24": {
+      "name": "MultipleHelpWindow",
+      "sourceOffset": 34787416
+    },
+    "787428f2": {
+      "name": "MJIReward",
+      "sourceOffset": 34791992
+    },
+    "7881ada9": {
+      "name": "CutSceneReplay",
+      "sourceOffset": 34780200
+    },
+    "79e67c08": {
+      "name": "ManeuversGoblinSoldier",
+      "sourceOffset": 34787352
+    },
+    "7a27c451": {
+      "name": "MiragePrismPrismSetRevert",
+      "sourceOffset": 34788200
+    },
+    "7a3727b2": {
+      "name": "JobHudWHM0",
+      "sourceOffset": 34798616
+    },
+    "7a6a6a42": {
+      "name": "JobHudRPM0",
+      "sourceOffset": 34799048
+    },
+    "7ae4c1a8": {
+      "name": "ItemInspectionResult",
+      "sourceOffset": 34786032
+    },
+    "7ba80075": {
+      "name": "JobHudRPM1",
+      "sourceOffset": 34799064
+    },
+    "7be70fbb": {
+      "name": "AOZNotebookPresetList",
+      "sourceOffset": 34789224
+    },
+    "7c9e5b22": {
+      "name": "ContentsFinderSetting",
+      "sourceOffset": 34777744
+    },
+    "7d14aae8": {
+      "name": "TurnBreakTitle",
+      "sourceOffset": 34793120
+    },
+    "7d6b9dff": {
+      "name": "ListIcon",
+      "sourceOffset": 34775896
+    },
+    "7d9b9f5a": {
+      "name": "MonsterNote",
+      "sourceOffset": 34777368
+    },
+    "7daddfab": {
+      "name": "HelpWindow",
+      "sourceOffset": 34787400
+    },
+    "7dbe3d96": {
+      "name": "GroupPoseStamp",
+      "sourceOffset": 34785840
+    },
+    "7e1675ec": {
+      "name": "DescriptionYTC",
+      "sourceOffset": 34788952
+    },
+    "7e747433": {
+      "name": "JobHudBRD0",
+      "sourceOffset": 34798600
+    },
+    "7e747466": {
+      "name": "FittingShop",
+      "sourceOffset": 34791672
+    },
+    "7ebb88a1": {
+      "name": "ItemDetailCompare",
+      "sourceOffset": 34776712
+    },
+    "7f0a4871": {
+      "name": "LookingForGroup",
+      "sourceOffset": 34780568
+    },
+    "7f0f2c3c": {
+      "name": "MYCItemBag",
+      "sourceOffset": 34791032
+    },
+    "7f5d020a": {
+      "name": "JobHudWAR0",
+      "sourceOffset": 34798488
+    },
+    "7f87d55a": {
+      "name": "InventoryBuddy",
+      "sourceOffset": 34787960
+    },
+    "7f9f749d": {
+      "name": "RoadStone",
+      "sourceOffset": 34787464
+    },
+    "8053b0c4": {
+      "name": "CharacterInspect",
+      "sourceOffset": 34777088
+    },
+    "80d816c3": {
+      "name": "ActionMenuReplaceList",
+      "sourceOffset": 34776672
+    },
+    "80fdb1af": {
+      "name": "RepairRequest",
+      "sourceOffset": 34776992
+    },
+    "810133be": {
+      "name": "_TofuObjectList",
+      "sourceOffset": 34796936
+    },
+    "81394395": {
+      "name": "_ContentGauge",
+      "sourceOffset": 34796544
+    },
+    "818362b0": {
+      "name": "WKSPlanetSelect",
+      "sourceOffset": 34794408
+    },
+    "82f83cbe": {
+      "name": "SelectString",
+      "sourceOffset": 34775816
+    },
+    "83096ddd": {
+      "name": "HWDGathereInspectTargetList",
+      "sourceOffset": 34790768
+    },
+    "83cf4464": {
+      "name": "PcSearchSelectLocation",
+      "sourceOffset": 34776272
+    },
+    "856d5fe7": {
+      "name": "MJIHousingGoods",
+      "sourceOffset": 34792624
+    },
+    "861392cd": {
+      "name": "ColorPicker",
+      "sourceOffset": 34777568
+    },
+    "863287d3": {
+      "name": "MJIAnimalManagement",
+      "sourceOffset": 34792216
+    },
+    "8634ad44": {
+      "name": "Mobhunt",
+      "sourceOffset": 34781704
+    },
+    "864486ba": {
+      "name": "_HudLayoutWindow",
+      "sourceOffset": 34796632
+    },
+    "8657c04e": {
+      "name": "InputSearchComment",
+      "sourceOffset": 34792720
+    },
+    "86583933": {
+      "name": "BeginnersMansionProblemCompList",
+      "sourceOffset": 34784168
+    },
+    "86d898d3": {
+      "name": "BannerEditor",
+      "sourceOffset": 34791560
+    },
+    "8717fc18": {
+      "name": "FishGuide2",
+      "sourceOffset": 34780064
+    },
+    "88aabf42": {
+      "name": "MYCItemBox",
+      "sourceOffset": 34791016
+    },
+    "88ee6357": {
+      "name": "ScenarioTree",
+      "sourceOffset": 34787144
+    },
+    "892f75cf": {
+      "name": "MKSRecord",
+      "sourceOffset": 34791528
+    },
+    "898057ed": {
+      "name": "Emote",
+      "sourceOffset": 34774516
+    },
+    "89a79fbb": {
+      "name": "DeepDungeonSaveData",
+      "sourceOffset": 34784992
+    },
+    "8af95a70": {
+      "name": "_MainCommand",
+      "sourceOffset": 34776792
+    },
+    "8afd4ee3": {
+      "name": "WKSHud",
+      "sourceOffset": 34775100
+    },
+    "8c4edb79": {
+      "name": "SatisfactionList",
+      "sourceOffset": 34786304
+    },
+    "8c50aa88": {
+      "name": "MYCDuelRequest",
+      "sourceOffset": 34791136
+    },
+    "8c7cd287": {
+      "name": "LovmResult",
+      "sourceOffset": 34783792
+    },
+    "8ddfb6b1": {
+      "name": "MiragePrismPrismSetConvert",
+      "sourceOffset": 34788104
+    },
+    "8e159ce6": {
+      "name": "AirShipExplorationDetail",
+      "sourceOffset": 34783216
+    },
+    "8ea0a7b6": {
+      "name": "Orchestrion",
+      "sourceOffset": 34784272
+    },
+    "8ef824fe": {
+      "name": "FreeCompanyProfile",
+      "sourceOffset": 34778136
+    },
+    "8fa599d3": {
+      "name": "MKDSupportJob",
+      "sourceOffset": 34794480
+    },
+    "8fdb6b58": {
+      "name": "BannerParty",
+      "sourceOffset": 34793024
+    },
+    "9058ccf2": {
+      "name": "TalkAutoMessageSetting",
+      "sourceOffset": 34793896
+    },
+    "90c8401e": {
+      "name": "DifficultySelectYesNo",
+      "sourceOffset": 34789952
+    },
+    "90d429ad": {
+      "name": "ItemInspection",
+      "sourceOffset": 34786016
+    },
+    "90ead514": {
+      "name": "JobHudDNC0",
+      "sourceOffset": 34798920
+    },
+    "9128bf23": {
+      "name": "JobHudDNC1",
+      "sourceOffset": 34798936
+    },
+    "913ec97d": {
+      "name": "_TargetInfo",
+      "sourceOffset": 34795952
+    },
+    "9157d50f": {
+      "name": "Buddy",
+      "sourceOffset": 34774420
+    },
+    "91c619bb": {
+      "name": "ItemSearchFilter",
+      "sourceOffset": 34777424
+    },
+    "925bfcbe": {
+      "name": "HousingSubmenu",
+      "sourceOffset": 34780448
+    },
+    "934a2c19": {
+      "name": "PlayGuide",
+      "sourceOffset": 34784256
+    },
+    "9374efca": {
+      "name": "SynthesisSimpleDialog",
+      "sourceOffset": 34779920
+    },
+    "959978b2": {
+      "name": "JobHudAST0",
+      "sourceOffset": 34798840
+    },
+    "961231f2": {
+      "name": "CompanyCraftRecipeNoteBook",
+      "sourceOffset": 34783104
+    },
+    "968b3803": {
+      "name": "WKSMission",
+      "sourceOffset": 34794040
+    },
+    "9732bd03": {
+      "name": "_GatheringMasterpieceInfo",
+      "sourceOffset": 34796832
+    },
+    "9793f21b": {
+      "name": "CharaCardEditMenu",
+      "sourceOffset": 34791768
+    },
+    "97dbbac4": {
+      "name": "ConfigPartyListRoleSort",
+      "sourceOffset": 34784392
+    },
+    "981ec49e": {
+      "name": "_ParameterWidget",
+      "sourceOffset": 34795832
+    },
+    "98487147": {
+      "name": "InventoryRetainerLarge",
+      "sourceOffset": 34781600
+    },
+    "984a4c69": {
+      "name": "Mobhunt2",
+      "sourceOffset": 34781712
+    },
+    "9874c76c": {
+      "name": "JobHudMCH0",
+      "sourceOffset": 34798792
+    },
+    "98a164c2": {
+      "name": "ContentsReplaySetting",
+      "sourceOffset": 34786384
+    },
+    "98b27dcd": {
+      "name": "MountNoteBook",
+      "sourceOffset": 34781584
+    },
+    "98e4ca13": {
+      "name": "HousingWareHouseStatus",
+      "sourceOffset": 34787376
+    },
+    "994fa74a": {
+      "name": "AirShipExplorationResult",
+      "sourceOffset": 34783184
+    },
+    "99e4b5a9": {
+      "name": "FreeCompanyChestLog",
+      "sourceOffset": 34780504
+    },
+    "9b927370": {
+      "name": "WKSAnnounce",
+      "sourceOffset": 34794008
+    },
+    "9ba75b6a": {
+      "name": "LookingForGroupNameSearch",
+      "sourceOffset": 34786096
+    },
+    "9bb10a0a": {
+      "name": "MKDLoreBook",
+      "sourceOffset": 34794552
+    },
+    "9bb2bbaa": {
+      "name": "LovmPalette",
+      "sourceOffset": 34783680
+    },
+    "9bb3fd21": {
+      "name": "MJIBuildingProgress",
+      "sourceOffset": 34792392
+    },
+    "9c0f2c00": {
+      "name": "HousingSelectHouse",
+      "sourceOffset": 34783640
+    },
+    "9cdd0bc7": {
+      "name": "GrandCompanyRank",
+      "sourceOffset": 34778184
+    },
+    "9ddb854a": {
+      "name": "SocialDetailA",
+      "sourceOffset": 34776224
+    },
+    "9e216c6d": {
+      "name": "Gathering",
+      "sourceOffset": 34775976
+    },
+    "9e53098a": {
+      "name": "Teleport",
+      "sourceOffset": 34781904
+    },
+    "9f0bb04e": {
+      "name": "FGSHudStatus",
+      "sourceOffset": 34793368
+    },
+    "9f6a5fea": {
+      "name": "ContentsNote",
+      "sourceOffset": 34780992
+    },
+    "9f77ab03": {
+      "name": "MiragePrismExecute",
+      "sourceOffset": 34778008
+    },
+    "9f9d3b13": {
+      "name": "SocialDetailB",
+      "sourceOffset": 34776240
+    },
+    "9ffe23ed": {
+      "name": "VVDNotebook",
+      "sourceOffset": 34792792
+    },
+    "a0511f1e": {
+      "name": "CharaCardDesignSetting",
+      "sourceOffset": 34791792
+    },
+    "a058b98c": {
+      "name": "MiragePrismPrismSetRevertC",
+      "sourceOffset": 34788168
+    },
+    "a1173246": {
+      "name": "ManeuversStation",
+      "sourceOffset": 34787328
+    },
+    "a1266d7e": {
+      "name": "WKSAchievement",
+      "sourceOffset": 34794216
+    },
+    "a1a8a487": {
+      "name": "JobHudSCH0",
+      "sourceOffset": 34798744
+    },
+    "a25bd1e8": {
+      "name": "MYCInfo",
+      "sourceOffset": 34791008
+    },
+    "a2627614": {
+      "name": "FateProgress",
+      "sourceOffset": 34777528
+    },
+    "a27fcd55": {
+      "name": "GuildLeve",
+      "sourceOffset": 34776320
+    },
+    "a29100d2": {
+      "name": "_ToDoList",
+      "sourceOffset": 34774984
+    },
+    "a2b42f6a": {
+      "name": "LookingForGroupSearch",
+      "sourceOffset": 34780640
+    },
+    "a2b87826": {
+      "name": "Shop",
+      "sourceOffset": 34776028
+    },
+    "a2d9b660": {
+      "name": "JobHudRRP0",
+      "sourceOffset": 34798952
+    },
+    "a2e94de9": {
+      "name": "MateriaAttachDialog",
+      "sourceOffset": 34777944
+    },
+    "a31bdc57": {
+      "name": "JobHudRRP1",
+      "sourceOffset": 34798968
+    },
+    "a379d379": {
+      "name": "IKDFishingLog",
+      "sourceOffset": 34790880
+    },
+    "a4a97910": {
+      "name": "WorldTravelSelect",
+      "sourceOffset": 34789448
+    },
+    "a4da42cd": {
+      "name": "BasketBall",
+      "sourceOffset": 34782136
+    },
+    "a57906d8": {
+      "name": "ConfigCharacter",
+      "sourceOffset": 34779232
+    },
+    "a6a23017": {
+      "name": "BeginnerChatInviteDialog",
+      "sourceOffset": 34786176
+    },
+    "a72670ca": {
+      "name": "FishRecord",
+      "sourceOffset": 34780104
+    },
+    "a744e8aa": {
+      "name": "HWDInfoBoard",
+      "sourceOffset": 34790680
+    },
+    "a78aad9a": {
+      "name": "CircleBook",
+      "sourceOffset": 34790064
+    },
+    "a844812a": {
+      "name": "ActionMenu",
+      "sourceOffset": 34776632
+    },
+    "a8d9fd9f": {
+      "name": "Hummer",
+      "sourceOffset": 34774364
+    },
+    "aa4495fb": {
+      "name": "MJIFarmAutomatic",
+      "sourceOffset": 34792312
+    },
+    "aac94ad0": {
+      "name": "LookingForGroupPrivate",
+      "sourceOffset": 34786072
+    },
+    "ab2d5e21": {
+      "name": "AreaMap",
+      "sourceOffset": 34776368
+    },
+    "abd310aa": {
+      "name": "SelectIconString",
+      "sourceOffset": 34776336
+    },
+    "ac0c743e": {
+      "name": "FrontlineRecordDetail",
+      "sourceOffset": 34783488
+    },
+    "ac3e7489": {
+      "name": "MiragePrismENpcSatisfaction",
+      "sourceOffset": 34788856
+    },
+    "ac969c19": {
+      "name": "TurnBreak",
+      "sourceOffset": 34793104
+    },
+    "acb27b4c": {
+      "name": "ReadyCheck",
+      "sourceOffset": 34780928
+    },
+    "aceaa6ef": {
+      "name": "LegacyItemStorage",
+      "sourceOffset": 34778160
+    },
+    "ae39a3a4": {
+      "name": "AkatsukiNote",
+      "sourceOffset": 34791512
+    },
+    "ae8e3b27": {
+      "name": "GuildLeveDifficulty",
+      "sourceOffset": 34776376
+    },
+    "aec2c0df": {
+      "name": "JobHudGNB0",
+      "sourceOffset": 34798904
+    },
+    "af0fc3c6": {
+      "name": "GcArmyOrder",
+      "sourceOffset": 34784776
+    },
+    "b06bc990": {
+      "name": "Talk",
+      "sourceOffset": 34775908
+    },
+    "b0985e7c": {
+      "name": "Character",
+      "sourceOffset": 34776824
+    },
+    "b126acf5": {
+      "name": "MJIHousingMenu",
+      "sourceOffset": 34792664
+    },
+    "b138d8d7": {
+      "name": "MentorCertification",
+      "sourceOffset": 34790544
+    },
+    "b19add45": {
+      "name": "VVDAction",
+      "sourceOffset": 34792824
+    },
+    "b201b1ca": {
+      "name": "LicenseViewer",
+      "sourceOffset": 34779272
+    },
+    "b2af4902": {
+      "name": "Currency",
+      "sourceOffset": 34783336
+    },
+    "b300b6bc": {
+      "name": "TripleTriadRule",
+      "sourceOffset": 34782864
+    },
+    "b3912e67": {
+      "name": "NgWordEdit",
+      "sourceOffset": 34793968
+    },
+    "b42834c4": {
+      "name": "WorldTravelFinderReady",
+      "sourceOffset": 34789496
+    },
+    "b43ebd70": {
+      "name": "MJIDisposeShopShippingBulk",
+      "sourceOffset": 34792480
+    },
+    "b48531bf": {
+      "name": "HousingGoods",
+      "sourceOffset": 34780344
+    },
+    "b5200599": {
+      "name": "AdventureNoteBook",
+      "sourceOffset": 34781464
+    },
+    "b539e1c6": {
+      "name": "MoogleCollection",
+      "sourceOffset": 34793232
+    },
+    "b57714f0": {
+      "name": "TourismMenu",
+      "sourceOffset": 34791288
+    },
+    "b5a655e1": {
+      "name": "FreeCompanyExchange",
+      "sourceOffset": 34779720
+    },
+    "b5d2b1e5": {
+      "name": "ContextMenu",
+      "sourceOffset": 34775768
+    },
+    "b5d8f898": {
+      "name": "FGSSpectatorMenu",
+      "sourceOffset": 34793400
+    },
+    "b60d75c0": {
+      "name": "CharaCardProfileSetting",
+      "sourceOffset": 34791816
+    },
+    "b63fe70d": {
+      "name": "RecipeNote",
+      "sourceOffset": 34776496
+    },
+    "b67be526": {
+      "name": "MKDRelicGrowth2",
+      "sourceOffset": 34794584
+    },
+    "b693eb41": {
+      "name": "MountSpeed",
+      "sourceOffset": 34786880
+    },
+    "b6ab2161": {
+      "name": "JobHudRDB1",
+      "sourceOffset": 34799032
+    },
+    "b6d09c70": {
+      "name": "IKDMission",
+      "sourceOffset": 34790928
+    },
+    "b70858dd": {
+      "name": "PcSearchDetail",
+      "sourceOffset": 34776256
+    },
+    "b7154939": {
+      "name": "ChatConfig",
+      "sourceOffset": 34777496
+    },
+    "b7230747": {
+      "name": "WKSMechaOperationEntryScreen",
+      "sourceOffset": 34794136
+    },
+    "b7423015": {
+      "name": "MiragePrism",
+      "sourceOffset": 34777992
+    },
+    "b756d97e": {
+      "name": "LFGFilterSettings",
+      "sourceOffset": 34787120
+    },
+    "b7694b56": {
+      "name": "JobHudRDB0",
+      "sourceOffset": 34799016
+    },
+    "b7b98f11": {
+      "name": "MKDRelicGrowth3",
+      "sourceOffset": 34794600
+    },
+    "b7e4e9ed": {
+      "name": "ContentsFinder",
+      "sourceOffset": 34777728
+    },
+    "b7fd161a": {
+      "name": "MJIBuilding",
+      "sourceOffset": 34792376
+    },
+    "b8bd6685": {
+      "name": "_EnemyList",
+      "sourceOffset": 34796480
+    },
+    "b8e853b6": {
+      "name": "MJIEntrance",
+      "sourceOffset": 34792576
+    },
+    "b9275601": {
+      "name": "TofuList",
+      "sourceOffset": 34792856
+    },
+    "ba81e8d1": {
+      "name": "_ActionCross",
+      "sourceOffset": 34796312
+    },
+    "ba9838c0": {
+      "name": "JobHudDRG0",
+      "sourceOffset": 34798584
+    },
+    "ba9967d0": {
+      "name": "SkyIslandExchange2",
+      "sourceOffset": 34784048
+    },
+    "bb064d23": {
+      "name": "McGuffin",
+      "sourceOffset": 34790624
+    },
+    "bb238f23": {
+      "name": "MJIDisposeShop",
+      "sourceOffset": 34792440
+    },
+    "bb48c254": {
+      "name": "BannerConfirm",
+      "sourceOffset": 34791640
+    },
+    "bc587906": {
+      "name": "ContentsFinderSupply",
+      "sourceOffset": 34777840
+    },
+    "bca8751f": {
+      "name": "WKSPouch",
+      "sourceOffset": 34794024
+    },
+    "bcf611d4": {
+      "name": "CharacterTitleSelect",
+      "sourceOffset": 34783592
+    },
+    "bd11f6bf": {
+      "name": "TripleTriadRequest",
+      "sourceOffset": 34782200
+    },
+    "bd128377": {
+      "name": "_TargetInfoMainTarget",
+      "sourceOffset": 34796016
+    },
+    "bf07073d": {
+      "name": "Journal",
+      "sourceOffset": 34776440
+    },
+    "bf72b32a": {
+      "name": "HudLayoutCurrentWindow",
+      "sourceOffset": 34777176
+    },
+    "bfa2a793": {
+      "name": "LetterHistory",
+      "sourceOffset": 34781032
+    },
+    "bfb5f0eb": {
+      "name": "FreeCompanyInputString",
+      "sourceOffset": 34779152
+    },
+    "bffb5d93": {
+      "name": "EurekaChainInfo",
+      "sourceOffset": 34787736
+    },
+    "c013e7f1": {
+      "name": "JobHudXBM1",
+      "sourceOffset": 34799096
+    },
+    "c06cf93e": {
+      "name": "ShopCardDialog",
+      "sourceOffset": 34782824
+    },
+    "c0d6eda8": {
+      "name": "VVDVoteRoute",
+      "sourceOffset": 34792840
+    },
+    "c155d3e2": {
+      "name": "RetainerTaskAsk",
+      "sourceOffset": 34781128
+    },
+    "c1625479": {
+      "name": "NgWordFilterList",
+      "sourceOffset": 34793920
+    },
+    "c18047cf": {
+      "name": "MJICraftDemandResearch",
+      "sourceOffset": 34792008
+    },
+    "c1ce9396": {
+      "name": "ConfigSystem",
+      "sourceOffset": 34777480
+    },
+    "c1d18dc6": {
+      "name": "JobHudXBM0",
+      "sourceOffset": 34799080
+    },
+    "c224b802": {
+      "name": "RecommendList",
+      "sourceOffset": 34780024
+    },
+    "c2907a6a": {
+      "name": "PunchingMachine",
+      "sourceOffset": 34782120
+    },
+    "c292f05f": {
+      "name": "_FocusTargetInfo",
+      "sourceOffset": 34796560
+    },
+    "c2b4cca8": {
+      "name": "FreeCompanyMemberRankAssign",
+      "sourceOffset": 34779064
+    },
+    "c33e47f3": {
+      "name": "FashionCheck",
+      "sourceOffset": 34788416
+    },
+    "c34b6607": {
+      "name": "GearSetView",
+      "sourceOffset": 34780184
+    },
+    "c37578f0": {
+      "name": "KTGResult",
+      "sourceOffset": 34793576
+    },
+    "c3acb5d2": {
+      "name": "PvPMap",
+      "sourceOffset": 34774580
+    },
+    "c43e32d1": {
+      "name": "MiragePrismPrismBoxCrystallize",
+      "sourceOffset": 34788040
+    },
+    "c48d3605": {
+      "name": "_ActionBar",
+      "sourceOffset": 34796136
+    },
+    "c4b6fb74": {
+      "name": "HWDAetherGauge",
+      "sourceOffset": 34790728
+    },
+    "c5b38a6b": {
+      "name": "TelepotTown",
+      "sourceOffset": 34781936
+    },
+    "c68dd1b4": {
+      "name": "CountDownSettingDialog",
+      "sourceOffset": 34785120
+    },
+    "c6a2cde4": {
+      "name": "FGSExitDialog",
+      "sourceOffset": 34793440
+    },
+    "c767b74d": {
+      "name": "MiragePrismPrismBox",
+      "sourceOffset": 34788016
+    },
+    "c79f450a": {
+      "name": "_LimitBreak",
+      "sourceOffset": 34796600
+    },
+    "c81001f7": {
+      "name": "PvPMKSIntroduction",
+      "sourceOffset": 34785536
+    },
+    "c825219a": {
+      "name": "LookingForGroupDetail",
+      "sourceOffset": 34780584
+    },
+    "c86b2dba": {
+      "name": "ChatLogPanel_1",
+      "sourceOffset": 35782456,
+      "format": "ChatLogPanel_%d",
+      "index": 1
+    },
+    "c9a9478d": {
+      "name": "ChatLogPanel_0",
+      "sourceOffset": 35782456,
+      "format": "ChatLogPanel_%d",
+      "index": 0
+    },
+    "ca2d93e3": {
+      "name": "ChatLogPanel_2",
+      "sourceOffset": 35782456,
+      "format": "ChatLogPanel_%d",
+      "index": 2
+    },
+    "ca51f35c": {
+      "name": "CharaCard",
+      "sourceOffset": 34791752
+    },
+    "cadd58cb": {
+      "name": "JobHudACN0",
+      "sourceOffset": 34798728
+    },
+    "cb54a2ef": {
+      "name": "_TargetInfoCastBar",
+      "sourceOffset": 34795992
+    },
+    "cb764427": {
+      "name": "AetherCurrent",
+      "sourceOffset": 34783296
+    },
+    "cbeff9d4": {
+      "name": "ChatLogPanel_3",
+      "sourceOffset": 35782456,
+      "format": "ChatLogPanel_%d",
+      "index": 3
+    },
+    "cda89776": {
+      "name": "_DTR",
+      "sourceOffset": 34796096
+    },
+    "cdd97a3a": {
+      "name": "MiragePrismENpcSatisfactionSub",
+      "sourceOffset": 34788888
+    },
+    "ce06bf94": {
+      "name": "PvPFrontlineInfo",
+      "sourceOffset": 34785656
+    },
+    "ce2beb84": {
+      "name": "InventoryEventGrid2E",
+      "sourceOffset": 35792640,
+      "format": "InventoryEventGrid%dE",
+      "index": 2
+    },
+    "ce3cf456": {
+      "name": "HousingSelectBlock",
+      "sourceOffset": 34780360
+    },
+    "ce9a7f40": {
+      "name": "MYCActionSelect",
+      "sourceOffset": 34791096
+    },
+    "ce9b137b": {
+      "name": "RetainerInputString",
+      "sourceOffset": 34791480
+    },
+    "cf2ef950": {
+      "name": "GcArmyMemberList",
+      "sourceOffset": 34784488
+    },
+    "cf73ffbe": {
+      "name": "MYCItemMySet",
+      "sourceOffset": 34791080
+    },
+    "cfb7260a": {
+      "name": "_TofuEditObjectLayer",
+      "sourceOffset": 34796888
+    },
+    "cfede09d": {
+      "name": "Bank",
+      "sourceOffset": 34776892
+    },
+    "d0cc3935": {
+      "name": "RetainerTaskList",
+      "sourceOffset": 34781104
+    },
+    "d0f9ced1": {
+      "name": "RetainerTaskResult",
+      "sourceOffset": 34781168
+    },
+    "d115dce3": {
+      "name": "LovmActionDetail",
+      "sourceOffset": 34783872
+    },
+    "d139e075": {
+      "name": "BeginnersMansionProblem",
+      "sourceOffset": 34784144
+    },
+    "d1c67856": {
+      "name": "MKDSupportJobList",
+      "sourceOffset": 34794496
+    },
+    "d21203fe": {
+      "name": "HousingConfig",
+      "sourceOffset": 34780256
+    },
+    "d27cd97e": {
+      "name": "GatheringMasterpiece",
+      "sourceOffset": 34783448
+    },
+    "d291b5f8": {
+      "name": "DawnHelp",
+      "sourceOffset": 34789792
+    },
+    "d2d163eb": {
+      "name": "SelectYesNoTextScroll",
+      "sourceOffset": 34791728
+    },
+    "d30dfffa": {
+      "name": "MYCItemBagMySet",
+      "sourceOffset": 34791064
+    },
+    "d63153fb": {
+      "name": "FreeCompanyProfileEdit",
+      "sourceOffset": 34779760
+    },
+    "d6624f9e": {
+      "name": "RepairAuto",
+      "sourceOffset": 34777008
+    },
+    "d7df241f": {
+      "name": "PvPTeamOrganization",
+      "sourceOffset": 34787664
+    },
+    "d7f09508": {
+      "name": "CrossWorldLinkshell",
+      "sourceOffset": 34788720
+    },
+    "d83aaffa": {
+      "name": "FGSHudRaceLog",
+      "sourceOffset": 34793384
+    },
+    "d8441a3f": {
+      "name": "ArmouryBoard",
+      "sourceOffset": 34777616
+    },
+    "d8d188ff": {
+      "name": "_ActionBarEx",
+      "sourceOffset": 34796296
+    },
+    "da20712e": {
+      "name": "_TofuEditObjectCanvas",
+      "sourceOffset": 34796864
+    },
+    "da29b46a": {
+      "name": "QuestRedoHud",
+      "sourceOffset": 34789936
+    },
+    "db76087a": {
+      "name": "ContentsFinderConfirm",
+      "sourceOffset": 34777792
+    },
+    "dbc09dea": {
+      "name": "FGSHudScore",
+      "sourceOffset": 34793352
+    },
+    "dc9e446a": {
+      "name": "InventoryEventGrid1E",
+      "sourceOffset": 35792640,
+      "format": "InventoryEventGrid%dE",
+      "index": 1
+    },
+    "dcac125a": {
+      "name": "JobHudBLM0",
+      "sourceOffset": 34798504
+    },
+    "dd6e786d": {
+      "name": "JobHudBLM1",
+      "sourceOffset": 34798648
+    },
+    "ddab5159": {
+      "name": "Emj",
+      "sourceOffset": 34774404
+    },
+    "de442d84": {
+      "name": "Tryon",
+      "sourceOffset": 34774876
+    },
+    "de503ea4": {
+      "name": "RecipeProductList",
+      "sourceOffset": 34776608
+    },
+    "df217364": {
+      "name": "_Notification",
+      "sourceOffset": 34796080
+    },
+    "df48f1b7": {
+      "name": "WeeklyBingoBonusInfo",
+      "sourceOffset": 34785184
+    },
+    "dfc06908": {
+      "name": "UfoCatcher",
+      "sourceOffset": 34782152
+    },
+    "dfc605ab": {
+      "name": "Inventory",
+      "sourceOffset": 34776040
+    },
+    "dffb27f2": {
+      "name": "MerchantSetting",
+      "sourceOffset": 34789064
+    },
+    "e0aad2a7": {
+      "name": "FreeCompany",
+      "sourceOffset": 34777600
+    },
+    "e155e172": {
+      "name": "PvPMKSPartyList1",
+      "sourceOffset": 34785352
+    },
+    "e1d7fc47": {
+      "name": "WKSLottery",
+      "sourceOffset": 34794352
+    },
+    "e201176c": {
+      "name": "WKSReward",
+      "sourceOffset": 34794336
+    },
+    "e219f456": {
+      "name": "MinionNoteBook",
+      "sourceOffset": 34781568
+    },
+    "e2d1351c": {
+      "name": "PvPMKSPartyList3",
+      "sourceOffset": 34785400
+    },
+    "e2dd7a4b": {
+      "name": "TripleTriadCoinExchange",
+      "sourceOffset": 34782448
+    },
+    "e35573eb": {
+      "name": "ContentsTutorial",
+      "sourceOffset": 34777056
+    },
+    "e3ad2a05": {
+      "name": "LookingForGroupCondition",
+      "sourceOffset": 34780608
+    },
+    "e43ecbfe": {
+      "name": "WKSHistoryBoard",
+      "sourceOffset": 34794392
+    },
+    "e4d35b0f": {
+      "name": "SelectYesno",
+      "sourceOffset": 34775800
+    },
+    "e53962b7": {
+      "name": "RaidFinder",
+      "sourceOffset": 34784912
+    },
+    "e69d30d2": {
+      "name": "ManeuversAllianceList",
+      "sourceOffset": 34787280
+    },
+    "e69f8e08": {
+      "name": "GrandCompanySupplyList",
+      "sourceOffset": 34778992
+    },
+    "e6a886cb": {
+      "name": "ConfigLogColor",
+      "sourceOffset": 34777352
+    },
+    "e6f866ad": {
+      "name": "MiniGameBotanist",
+      "sourceOffset": 34783928
+    },
+    "e790007b": {
+      "name": "WeeklyBingoResult",
+      "sourceOffset": 34785208
+    },
+    "e80ca99e": {
+      "name": "KTGEnterDialogue",
+      "sourceOffset": 34793552
+    },
+    "e860c187": {
+      "name": "EventTutorial",
+      "sourceOffset": 34794976
+    },
+    "e880282c": {
+      "name": "GatheringNote",
+      "sourceOffset": 34776400
+    },
+    "e8f208e3": {
+      "name": "TripleTriadRanking",
+      "sourceOffset": 34782800
+    },
+    "ea35347b": {
+      "name": "ContextIconMenu",
+      "sourceOffset": 34777584
+    },
+    "ea4c823f": {
+      "name": "TalkAutoMessageSelector",
+      "sourceOffset": 34793872
+    },
+    "ea7f7dc6": {
+      "name": "MountainClimbingResult",
+      "sourceOffset": 34789016
+    },
+    "eb108091": {
+      "name": "MentorCondition",
+      "sourceOffset": 34790528
+    },
+    "eb25768d": {
+      "name": "ExHotbarEditor",
+      "sourceOffset": 34791712
+    },
+    "ebb033d0": {
+      "name": "LetterViewer",
+      "sourceOffset": 34776464
+    },
+    "ecb29811": {
+      "name": "_CastBar",
+      "sourceOffset": 34776088
+    },
+    "ecb607d5": {
+      "name": "JobHudSAM0",
+      "sourceOffset": 34798872
+    },
+    "ed4bb501": {
+      "name": "PvpReward",
+      "sourceOffset": 34787104
+    },
+    "ed746de2": {
+      "name": "JobHudSAM1",
+      "sourceOffset": 34798856
+    },
+    "ed966579": {
+      "name": "MiragePrismPrismBoxFilter",
+      "sourceOffset": 34788072
+    },
+    "ee3c43d4": {
+      "name": "AchievementInfo",
+      "sourceOffset": 34777648
+    },
+    "ef0a5b00": {
+      "name": "JobHudRDM0",
+      "sourceOffset": 34798888
+    },
+    "ef4d86cc": {
+      "name": "CharaCardPlayStyleSetting",
+      "sourceOffset": 34791872
+    },
+    "efbafe40": {
+      "name": "JobHudPLD0",
+      "sourceOffset": 34798440
+    },
+    "effa486d": {
+      "name": "ConfigCharacterChatLogMiniTalk",
+      "sourceOffset": 34794992
+    },
+    "f04e8778": {
+      "name": "JobHudDRK0",
+      "sourceOffset": 34798808
+    },
+    "f05b641b": {
+      "name": "WKSEnterInfo",
+      "sourceOffset": 34794440
+    },
+    "f0b62e4e": {
+      "name": "ScreenInfo_CountDown",
+      "sourceOffset": 34785144
+    },
+    "f18ced4f": {
+      "name": "JobHudDRK1",
+      "sourceOffset": 34798824
+    },
+    "f18d1519": {
+      "name": "ItemFinder",
+      "sourceOffset": 34788920
+    },
+    "f22f5c40": {
+      "name": "SubmarineExplorationMapSelect",
+      "sourceOffset": 34789888
+    },
+    "f231f159": {
+      "name": "WeeklyBingo",
+      "sourceOffset": 34785168
+    },
+    "f347f7e3": {
+      "name": "PvPMKSBattleLog",
+      "sourceOffset": 34785472
+    },
+    "f4022056": {
+      "name": "InventoryRetainer",
+      "sourceOffset": 34776872
+    },
+    "f4aa5591": {
+      "name": "_ActionBar08",
+      "sourceOffset": 34796264
+    },
+    "f5683fa6": {
+      "name": "_ActionBar09",
+      "sourceOffset": 34796280
+    },
+    "f5abc8eb": {
+      "name": "XBMItemDetail",
+      "sourceOffset": 34795288
+    },
+    "f5e8039f": {
+      "name": "Omikuji",
+      "sourceOffset": 34791504
+    },
+    "f69e2fe8": {
+      "name": "JournalAccept",
+      "sourceOffset": 34775920
+    },
+    "f6e650c4": {
+      "name": "GlassSelect",
+      "sourceOffset": 34793752
+    },
+    "f7913026": {
+      "name": "GroupPoseStampImage",
+      "sourceOffset": 34785856
+    },
+    "f7da38c4": {
+      "name": "JobHudNotice",
+      "sourceOffset": 34777040
+    },
+    "f8b6dafe": {
+      "name": "XBMBattleMonsterDetail",
+      "sourceOffset": 34795304
+    },
+    "f8ffba70": {
+      "name": "_ActionBar03",
+      "sourceOffset": 34796184
+    },
+    "f93dd047": {
+      "name": "_ActionBar02",
+      "sourceOffset": 34796168
+    },
+    "f93ffbe7": {
+      "name": "MansionSelectRoom",
+      "sourceOffset": 34785072
+    },
+    "f954f33a": {
+      "name": "IdlingCameraSetting",
+      "sourceOffset": 34785784
+    },
+    "f9ae6e37": {
+      "name": "FreeCompanyChest",
+      "sourceOffset": 34779696
+    },
+    "f9be829f": {
+      "name": "ContentsFinderMenu",
+      "sourceOffset": 34784464
+    },
+    "fa407cd3": {
+      "name": "FishingNote",
+      "sourceOffset": 34777712
+    },
+    "fab3d4b6": {
+      "name": "MJIGatheringNoteBook",
+      "sourceOffset": 34792416
+    },
+    "fb1b33d1": {
+      "name": "Alliance48",
+      "sourceOffset": 34780888
+    },
+    "fb7b6e1e": {
+      "name": "_ActionBar01",
+      "sourceOffset": 34796152
+    },
+    "fbc60064": {
+      "name": "SelectOk",
+      "sourceOffset": 34775784
+    },
+    "fc72c6c2": {
+      "name": "_ActionBar05",
+      "sourceOffset": 34796216
+    },
+    "fc84e0da": {
+      "name": "FreeShop",
+      "sourceOffset": 34789000
+    },
+    "fca9c7b1": {
+      "name": "RetainerItemTransferProgress",
+      "sourceOffset": 34781224
+    },
+    "fce3462f": {
+      "name": "ContentsInfoDetail",
+      "sourceOffset": 34781008
+    },
+    "fd1e2b6f": {
+      "name": "MJIRecipeNoteBook",
+      "sourceOffset": 34791952
+    },
+    "fd56f40a": {
+      "name": "HousingGuestBook",
+      "sourceOffset": 34788568
+    },
+    "fdb0acf5": {
+      "name": "_ActionBar04",
+      "sourceOffset": 34796200
+    },
+    "fe34789b": {
+      "name": "_ActionBar06",
+      "sourceOffset": 34796232
+    },
+    "fe8b526b": {
+      "name": "MYCDuelRequestDialog",
+      "sourceOffset": 34791152
+    },
+    "fec54257": {
+      "name": "HWDLottery",
+      "sourceOffset": 34790696
+    },
+    "fff612ac": {
+      "name": "_ActionBar07",
+      "sourceOffset": 34796248
+    }
+  },
+  "labels": {
+    "AOZNotebook": "青魔法书",
+    "AOZNotebookPresetList": "青魔法预设列表",
+    "Achievement": "成就",
+    "AchievementInfo": "成就信息",
+    "AchievementSetting": "成就设置",
+    "ActionDetail": "技能详情",
+    "ActionMenu": "技能与特性",
+    "ActionMenuActionSetting": "技能设置",
+    "ActionMenuReplaceList": "技能变换列表",
+    "AddonContextMenuTitle": "右键菜单标题",
+    "AddonContextSub": "右键子菜单",
+    "AdventureNoteBook": "探索笔记",
+    "AdventureNotice": "探索提示",
+    "AetherCurrent": "风脉泉",
+    "AirShipExplorationDetail": "飞空艇探索详情",
+    "AirShipExplorationResult": "飞空艇探索结果",
+    "AkatsukiNote": "笔记条目（Akatsuki）",
+    "Alarm": "闹钟",
+    "AlarmSettings": "闹钟设置",
+    "Alliance48": "48人团队",
+    "AllianceMemberList": "团队成员列表",
+    "AreaMap": "地图",
+    "ArmouryBoard": "兵装库",
+    "Bait": "鱼饵",
+    "Bank": "银行",
+    "BannerConfirm": "肖像确认",
+    "BannerEditor": "肖像编辑器",
+    "BannerList": "肖像列表",
+    "BannerMIP": "最优队员推荐肖像",
+    "BannerParty": "小队肖像",
+    "BannerPreview": "肖像预览",
+    "BannerUpdateView": "肖像更新预览",
+    "BasketBall": "投篮小游戏",
+    "BeginnerChatInviteDialog": "新人频道邀请",
+    "BeginnerChatList": "新人频道成员",
+    "BeginnersMansionProblem": "新人训练课题",
+    "BeginnersMansionProblemCompList": "新人训练完成课题",
+    "BeginnersMansionTutorial": "新人训练教程",
+    "BlackList": "黑名单",
+    "Buddy": "搭档",
+    "BuddyEquipList": "搭档装备列表",
+    "BuddyInspect": "搭档详情",
+    "Cabinet": "收藏柜",
+    "CabinetWithdraw": "取出收藏柜物品",
+    "CameraSetting": "镜头设置",
+    "CharaCard": "冒险者铭牌",
+    "CharaCardClassJobSetting": "冒险者铭牌 · 职业设置",
+    "CharaCardDesignSetting": "冒险者铭牌 · 设计设置",
+    "CharaCardEditMenu": "冒险者铭牌 · 编辑菜单",
+    "CharaCardPermissionSetting": "冒险者铭牌 · 公开范围",
+    "CharaCardPlayStyleSetting": "冒险者铭牌 · 游玩风格",
+    "CharaCardProfileSetting": "冒险者铭牌 · 个人资料",
+    "Character": "角色",
+    "CharacterInspect": "角色查看",
+    "CharacterTitle": "角色称号",
+    "CharacterTitleSelect": "选择角色称号",
+    "ChatConfig": "聊天设置",
+    "ChatLog": "聊天栏",
+    "ChatLogPanel_0": "聊天栏分页 1",
+    "ChatLogPanel_1": "聊天栏分页 2",
+    "ChatLogPanel_2": "聊天栏分页 3",
+    "ChatLogPanel_3": "聊天栏分页 4",
+    "CircleBook": "同好会留言板",
+    "CircleBookQuestion": "同好会问卷",
+    "CircleFinder": "同好会搜索",
+    "CircleFinderSetting": "同好会搜索设置",
+    "CircleList": "同好会列表",
+    "CollectablesShop": "收藏品交易",
+    "ColorPicker": "颜色选择器",
+    "ColorantColoring": "染色配色",
+    "ColorantEquipment": "装备染色",
+    "CompanyCraftRecipeNoteBook": "部队工房制作笔记",
+    "CompanyCraftSupply": "部队工房材料提交",
+    "ConfigCharacter": "角色设置",
+    "ConfigCharacterChatLogMiniTalk": "角色设置 · 对话气泡",
+    "ConfigChatLogNameSetting": "聊天名称显示设置",
+    "ConfigKeybind": "按键设置",
+    "ConfigLogColor": "聊天文字颜色",
+    "ConfigLogFilter": "聊天消息过滤",
+    "ConfigPartyListRoleSort": "小队列表职能排序",
+    "ConfigSystem": "系统设置",
+    "ContactList": "最近联系列表",
+    "ContentsFinder": "任务搜索器",
+    "ContentsFinderConfirm": "任务参加确认",
+    "ContentsFinderMenu": "任务搜索器菜单",
+    "ContentsFinderReady": "任务准备确认",
+    "ContentsFinderSetting": "任务搜索器设置",
+    "ContentsFinderStatus": "任务搜索状态",
+    "ContentsFinderSupply": "任务搜索器 · 补员",
+    "ContentsInfo": "任务情报",
+    "ContentsInfoDetail": "任务情报详情",
+    "ContentsNote": "挑战笔记",
+    "ContentsReplaySetting": "任务录像设置",
+    "ContentsTutorial": "任务教程",
+    "ContextIconMenu": "图标右键菜单",
+    "ContextMenu": "右键菜单",
+    "CountDownSettingDialog": "倒计时设置",
+    "CraftActionSimulator": "制作技能模拟器",
+    "CrossWorldLinkshell": "跨服通讯贝",
+    "Currency": "货币",
+    "CutSceneReplay": "过场动画回放",
+    "Dawn": "Dawn 界面",
+    "DawnHelp": "Dawn · 帮助",
+    "DawnStory": "Dawn · 剧情界面",
+    "DawnStoryMemberSelect": "Dawn · 剧情成员选择",
+    "DeepDungeonInspect": "深层迷宫 · 查看",
+    "DeepDungeonMap": "深层迷宫 · 地图",
+    "DeepDungeonMenu": "深层迷宫 · 菜单",
+    "DeepDungeonResult": "深层迷宫 · 结果",
+    "DeepDungeonSaveData": "深层迷宫 · 存档",
+    "DeepDungeonScore": "深层迷宫 · 评分",
+    "DeepDungeonStatus": "深层迷宫 · 状态",
+    "Description": "说明窗口",
+    "DescriptionDD": "说明窗口（DD）",
+    "DescriptionYTC": "说明窗口（YTC）",
+    "DifficultySelectYesNo": "难度选择确认",
+    "EasterStartCountdown": "活动开始倒计时（Easter）",
+    "Emj": "多玛方城战",
+    "Emote": "情感动作",
+    "EurekaChainInfo": "优雷卡连锁信息",
+    "EurekaElementalEdit": "优雷卡元素设置",
+    "EurekaElementalHud": "优雷卡元素量谱",
+    "EventTutorial": "活动教程",
+    "ExHotbarEditor": "特殊热键栏编辑",
+    "FGSEnterDialog": "FGS · 进入确认",
+    "FGSExitDialog": "FGS · 退出确认",
+    "FGSHudGoal": "FGS · 目标显示",
+    "FGSHudRaceLog": "FGS · 竞赛记录",
+    "FGSHudScore": "FGS · 得分显示",
+    "FGSHudStatus": "FGS · 状态显示",
+    "FGSSpectatorMenu": "FGS · 观战菜单",
+    "FashionCheck": "时尚品鉴",
+    "FateProgress": "临危受命进度",
+    "FateReward": "临危受命奖励",
+    "FieldMarker": "场地标点",
+    "FishGuide2": "鱼类图鉴 2",
+    "FishRecord": "钓鱼记录",
+    "FishingNote": "钓鱼笔记",
+    "FittingShop": "试穿商店",
+    "FreeCompany": "自由部队",
+    "FreeCompanyChest": "部队储物柜",
+    "FreeCompanyChestLog": "部队储物柜记录",
+    "FreeCompanyCreditShop": "部队战绩商店",
+    "FreeCompanyExchange": "部队交换",
+    "FreeCompanyInputString": "部队文字输入",
+    "FreeCompanyMemberRankAssign": "分配部队成员阶级",
+    "FreeCompanyProfile": "部队资料",
+    "FreeCompanyProfileEdit": "编辑部队资料",
+    "FreeCompanyRights": "部队权限",
+    "FreeShop": "免费商店",
+    "FriendGroupEdit": "好友分组编辑",
+    "FrontlineRecord": "纷争前线战绩",
+    "FrontlineRecordDetail": "纷争前线战绩详情",
+    "Gathering": "采集",
+    "GatheringMasterpiece": "收藏品采集",
+    "GatheringNote": "采集笔记",
+    "GcArmyCapture": "冒险者分队 · 攻略",
+    "GcArmyChangeTactic": "冒险者分队 · 战术变更",
+    "GcArmyChangeTrait": "冒险者分队 · 特性变更",
+    "GcArmyExpedition": "冒险者分队 · 任务",
+    "GcArmyExpeditionResult": "冒险者分队 · 任务结果",
+    "GcArmyMemberList": "冒险者分队 · 队员列表",
+    "GcArmyMenberProfile": "冒险者分队 · 队员资料",
+    "GcArmyOrder": "冒险者分队 · 指令",
+    "GcArmyTraining": "冒险者分队 · 训练",
+    "GearSetList": "套装列表",
+    "GearSetView": "套装查看",
+    "GlassSelect": "眼镜选择",
+    "GoldSaucerInfo": "金碟游乐场信息",
+    "GoldSaucerReward": "金碟游乐场奖励",
+    "GrandCompanyExchange": "军票交换",
+    "GrandCompanyRank": "大国防联军军衔",
+    "GrandCompanyRankUp": "大国防联军晋升",
+    "GrandCompanySupplyList": "大国防联军筹备品列表",
+    "GrandCompanySupplyReward": "大国防联军筹备奖励",
+    "GroupPoseGuide": "集体动作指南",
+    "GroupPoseStamp": "集体动作贴纸",
+    "GroupPoseStampImage": "集体动作图片贴纸",
+    "Guide": "指南",
+    "GuildLeve": "理符任务",
+    "GuildLeveDifficulty": "理符任务难度",
+    "HWDAetherGauge": "HWD · 以太量表",
+    "HWDGathereInspect": "HWD · 采集品检查",
+    "HWDGathereInspectTargetList": "HWD · 采集品检查目标",
+    "HWDInfoBoard": "HWD · 情报板",
+    "HWDLottery": "HWD · 抽奖",
+    "HWDSupply": "HWD · 材料提交",
+    "HelpWindow": "帮助窗口",
+    "HousingConfig": "住宅设置",
+    "HousingEditInterior": "住宅室内装修",
+    "HousingGoods": "住宅家具",
+    "HousingGuestBook": "住宅留言簿",
+    "HousingMenu": "住宅菜单",
+    "HousingSelectBlock": "选择住宅区",
+    "HousingSelectHouse": "选择住宅",
+    "HousingSelectRoom": "选择房间",
+    "HousingSignBoard": "住宅门牌",
+    "HousingSubmenu": "住宅子菜单",
+    "HousingWareHouseStatus": "住宅仓库状态",
+    "HowTo": "操作指南",
+    "HowToNotice": "操作指南提示",
+    "HudLayoutCurrentBuffStatus": "当前 HUD · 状态效果",
+    "HudLayoutCurrentTarget": "当前 HUD · 目标",
+    "HudLayoutCurrentWindow": "当前 HUD · 窗口",
+    "HudLayoutSetCopy": "复制 HUD 布局",
+    "Hummer": "Hummer 界面",
+    "IKDFishingLog": "IKD · 钓鱼日志",
+    "IKDMission": "IKD · 任务",
+    "IKDResult": "IKD · 结果",
+    "IKDSchedule": "IKD · 日程",
+    "IdlingCameraSetting": "闲置镜头设置",
+    "InclusionShop": "物品交换商店",
+    "InputNumeric": "数字输入",
+    "InputSearchComment": "搜索备注输入",
+    "InputString": "文字输入",
+    "Inventory": "背包",
+    "InventoryBuddy": "陆行鸟鞍囊",
+    "InventoryBuddy2": "高级陆行鸟鞍囊",
+    "InventoryEvent": "任务物品背包",
+    "InventoryEventGrid": "任务物品栏",
+    "InventoryEventGrid0": "任务物品栏网格 1",
+    "InventoryEventGrid0E": "任务物品栏网格 1（E）",
+    "InventoryEventGrid1": "任务物品栏网格 2",
+    "InventoryEventGrid1E": "任务物品栏网格 2（E）",
+    "InventoryEventGrid2": "任务物品栏网格 3",
+    "InventoryEventGrid2E": "任务物品栏网格 3（E）",
+    "InventoryExpansion": "背包展开视图",
+    "InventoryLarge": "背包大视图",
+    "InventoryRetainer": "雇员背包",
+    "InventoryRetainerLarge": "雇员背包大视图",
+    "ItemDetail": "物品详情",
+    "ItemDetailCompare": "物品比较",
+    "ItemFinder": "物品搜索",
+    "ItemHistory": "物品历史记录",
+    "ItemInspection": "物品检查",
+    "ItemInspectionList": "物品检查列表",
+    "ItemInspectionResult": "物品检查结果",
+    "ItemSearch": "市场物品搜索",
+    "ItemSearchFilter": "市场物品搜索筛选",
+    "ItemSearchResult": "市场物品搜索结果",
+    "JobHudACN0": "秘术师／学者量谱 1",
+    "JobHudAST0": "占星术士量谱 1",
+    "JobHudBLM0": "黑魔法师量谱 1",
+    "JobHudBLM1": "黑魔法师量谱 2",
+    "JobHudBRD0": "吟游诗人量谱 1",
+    "JobHudDNC0": "舞者量谱 1",
+    "JobHudDNC1": "舞者量谱 2",
+    "JobHudDRG0": "龙骑士量谱 1",
+    "JobHudDRK0": "暗黑骑士量谱 1",
+    "JobHudDRK1": "暗黑骑士量谱 2",
+    "JobHudGFF0": "贤者量谱 1",
+    "JobHudGFF1": "贤者量谱 2",
+    "JobHudGNB0": "绝枪战士量谱 1",
+    "JobHudMCH0": "机工士量谱 1",
+    "JobHudMNK0": "武僧量谱 1",
+    "JobHudMNK1": "武僧量谱 2",
+    "JobHudNIN0": "忍者量谱 1",
+    "JobHudNIN1v70": "忍者量谱 2（v70）",
+    "JobHudNotice": "职业量谱提示",
+    "JobHudPLD0": "骑士量谱 1",
+    "JobHudRDB0": "蝰蛇剑士量谱 1",
+    "JobHudRDB1": "蝰蛇剑士量谱 2",
+    "JobHudRDM0": "赤魔法师量谱 1",
+    "JobHudRPM0": "绘灵法师量谱 1",
+    "JobHudRPM1": "绘灵法师量谱 2",
+    "JobHudRRP0": "钐镰客量谱 1",
+    "JobHudRRP1": "钐镰客量谱 2",
+    "JobHudSAM0": "武士量谱 1",
+    "JobHudSAM1": "武士量谱 2",
+    "JobHudSCH0": "学者量谱 1",
+    "JobHudSMN0": "召唤师量谱 1",
+    "JobHudSMN1": "召唤师量谱 2",
+    "JobHudWAR0": "战士量谱 1",
+    "JobHudWHM0": "白魔法师量谱 1",
+    "JobHudXBM0": "驯兽师量谱 1",
+    "JobHudXBM1": "驯兽师量谱 2",
+    "Journal": "任务日志",
+    "JournalAccept": "接受任务",
+    "JournalResult": "任务结果",
+    "JournalRewardItem": "任务奖励物品",
+    "KTGEnterDialogue": "KTG · 进入对话",
+    "KTGResult": "KTG · 结果",
+    "LFGFilterSettings": "招募队员筛选设置",
+    "LegacyItemStorage": "旧版物品保管",
+    "LetterAddress": "邮件收件人",
+    "LetterEditor": "撰写邮件",
+    "LetterHistory": "邮件历史记录",
+    "LetterList": "邮件列表",
+    "LetterViewer": "查看邮件",
+    "LicenseViewer": "许可信息查看",
+    "ListIcon": "图标列表",
+    "LookingForGroup": "招募队员",
+    "LookingForGroupCondition": "招募条件",
+    "LookingForGroupDetail": "招募详情",
+    "LookingForGroupNameSearch": "按名称搜索招募",
+    "LookingForGroupPrivate": "私人招募",
+    "LookingForGroupSearch": "搜索招募",
+    "LookingForGroupSelectRole": "招募职能选择",
+    "LotteryDaily": "每日仙人微彩",
+    "LotteryWeeklyHistory": "每周仙人仙彩历史",
+    "LotteryWeeklyInput": "每周仙人仙彩选号",
+    "LotteryWeeklyRewardList": "每周仙人仙彩奖励",
+    "LovmActionDetail": "宠物对战 · 技能详情",
+    "LovmMiniMap": "宠物对战 · 小地图",
+    "LovmPalette": "宠物对战 · 操作面板",
+    "LovmPartyList": "宠物对战 · 编队列表",
+    "LovmQueueList": "宠物对战 · 队列",
+    "LovmResult": "宠物对战 · 结果",
+    "LovmTypeInfo": "宠物对战 · 类型信息",
+    "MJIAnimalManagement": "MJI · 动物管理",
+    "MJIBuilding": "MJI · 建筑",
+    "MJIBuildingMove": "MJI · 移动建筑",
+    "MJIBuildingProgress": "MJI · 建筑进度",
+    "MJICraftDemandResearch": "MJI · 生产需求调查",
+    "MJICraftMaterialConfirmation": "MJI · 生产材料确认",
+    "MJICraftSales": "MJI · 生产销售情况",
+    "MJICraftSchedule": "MJI · 生产日程",
+    "MJICraftScheduleMaterialList": "MJI · 生产日程材料清单",
+    "MJICraftScheduleSetting": "MJI · 生产日程设置",
+    "MJIDisposeShop": "MJI · 出售物品",
+    "MJIDisposeShopShippingBulk": "MJI · 批量出货",
+    "MJIEntrance": "MJI · 进入确认",
+    "MJIFarmAutomatic": "MJI · 农场自动管理",
+    "MJIFarmManagement": "MJI · 农场管理",
+    "MJIGatheringHouse": "MJI · 采集小屋",
+    "MJIGatheringNoteBook": "MJI · 采集笔记",
+    "MJIHousingGoods": "MJI · 家具",
+    "MJIHousingMenu": "MJI · 住宅菜单",
+    "MJIHud": "MJI · 界面显示",
+    "MJIMinionManagement": "MJI · 宠物管理",
+    "MJIMinionNoteBook": "MJI · 宠物笔记",
+    "MJIPouch": "MJI · 收纳袋",
+    "MJIRecipeNoteBook": "MJI · 制作笔记",
+    "MJIReward": "MJI · 报酬",
+    "MJISearchArea": "MJI · 搜索区域",
+    "MKDInfo": "MKD · 信息",
+    "MKDLoreBook": "MKD · 传说笔记",
+    "MKDRelicGrowth": "MKD · 遗物成长",
+    "MKDRelicGrowth2": "MKD · 遗物成长 2",
+    "MKDRelicGrowth3": "MKD · 遗物成长 3",
+    "MKDSettings": "MKD · 设置",
+    "MKDSupportJob": "MKD · 辅助职业",
+    "MKDSupportJobList": "MKD · 辅助职业列表",
+    "MKSRecord": "MKS · 战绩",
+    "MYCActionSelect": "MYC · 技能选择",
+    "MYCBattleAreaInfo": "MYC · 战场区域信息",
+    "MYCDuelRequest": "MYC · 单挑申请",
+    "MYCDuelRequestDialog": "MYC · 单挑申请确认",
+    "MYCInfo": "MYC · 信息",
+    "MYCItemBag": "MYC · 物品背包",
+    "MYCItemBagMySet": "MYC · 背包预设",
+    "MYCItemBox": "MYC · 物品箱",
+    "MYCItemMySet": "MYC · 物品预设",
+    "MYCWarResultNotebook": "MYC · 战绩笔记",
+    "Macro": "宏",
+    "MacroTextCommandList": "宏文本指令列表",
+    "ManeuversAllianceList": "Maneuvers · 团队列表",
+    "ManeuversGoblinSoldier": "Maneuvers · 哥布林士兵",
+    "ManeuversHeader": "Maneuvers · 顶部信息",
+    "ManeuversStation": "Maneuvers · 据点",
+    "ManeuversTeamInfo": "Maneuvers · 队伍信息",
+    "MansionSelectRoom": "公寓房间选择",
+    "Marker": "标记",
+    "MateriaAttach": "镶嵌魔晶石",
+    "MateriaAttachDialog": "镶嵌魔晶石确认",
+    "MateriaRetrieveDialog": "回收魔晶石确认",
+    "McGuffin": "McGuffin 界面",
+    "MentorCertification": "指导者认证",
+    "MentorCondition": "指导者资格条件",
+    "MerchantEquipSelect": "商店装备选择",
+    "MerchantSetting": "商店设置",
+    "MerchantShop": "商店交易",
+    "MiniGameAimg": "Aimg 小游戏",
+    "MiniGameBotanist": "园艺小游戏",
+    "MiniGameMiner": "采矿小游戏",
+    "MinionNoteBook": "宠物笔记",
+    "MiragePrism": "装备投影",
+    "MiragePrismENpcSatisfaction": "NPC 满意度装备投影",
+    "MiragePrismENpcSatisfactionSub": "NPC 满意度装备投影 · 子窗口",
+    "MiragePrismExecute": "执行装备投影",
+    "MiragePrismMiragePlate": "幻化模板",
+    "MiragePrismMiragePlateConfirm": "幻化模板确认",
+    "MiragePrismPrismBox": "投影台",
+    "MiragePrismPrismBoxCrystallize": "投影台 · 投入装备",
+    "MiragePrismPrismBoxFilter": "投影台 · 筛选",
+    "MiragePrismPrismItemDetail": "投影装备详情",
+    "MiragePrismPrismSetConvert": "投影台 · 转换套装",
+    "MiragePrismPrismSetConvertC": "投影台 · 转换套装（C）",
+    "MiragePrismPrismSetRevert": "投影台 · 还原套装",
+    "MiragePrismPrismSetRevertC": "投影台 · 还原套装（C）",
+    "MiragePrismRemove": "解除装备投影",
+    "Mobhunt": "怪物狩猎",
+    "Mobhunt2": "怪物狩猎 2",
+    "MonsterNote": "讨伐笔记",
+    "MoogleCollection": "莫古力收集活动",
+    "MoogleCollectionRewardList": "莫古力收集活动 · 报酬列表",
+    "MountNoteBook": "坐骑笔记",
+    "MountSpeed": "坐骑移动速度",
+    "MountainClimbingResult": "登山结果",
+    "MultipleHelpWindow": "多项帮助窗口",
+    "MuteList": "屏蔽名单",
+    "NeedGreed": "战利品分配",
+    "NgWordEdit": "屏蔽词编辑",
+    "NgWordFilterList": "屏蔽词列表",
+    "Omikuji": "抽签",
+    "Orchestrion": "管弦乐琴",
+    "OrchestrionINN": "旅馆管弦乐琴",
+    "OrchestrionPlayList": "管弦乐琴播放列表",
+    "OrnamentNoteBook": "时尚配饰笔记",
+    "PcSearchDetail": "玩家搜索详情",
+    "PcSearchSelectClass": "玩家搜索 · 职业选择",
+    "PcSearchSelectLocation": "玩家搜索 · 地区选择",
+    "PlayGuide": "游戏指南",
+    "PunchingMachine": "拳力测试机",
+    "PvPCharacter": "PvP 角色信息",
+    "PvPFrontlineGauge": "纷争前线计量条",
+    "PvPFrontlineHeader": "纷争前线顶部信息",
+    "PvPFrontlineInfo": "纷争前线信息",
+    "PvPMKSBattleLog": "PvP MKS · 战斗记录",
+    "PvPMKSHeader": "PvP MKS · 顶部信息",
+    "PvPMKSIntroduction": "PvP MKS · 介绍",
+    "PvPMKSPartyList1": "PvP MKS · 队伍列表 1",
+    "PvPMKSPartyList3": "PvP MKS · 队伍列表 3",
+    "PvPMap": "PvP 地图",
+    "PvPTeamOrganization": "PvP 队伍组织",
+    "PvpProfile": "PvP 档案",
+    "PvpReward": "PvP 报酬",
+    "PvpWelcome": "PvP 欢迎页面",
+    "QuestRedo": "任务重玩",
+    "QuestRedoHud": "任务重玩界面信息",
+    "QuickPanel": "快捷面板",
+    "QuickPanelSetting": "快捷面板设置",
+    "RaidFinder": "高难度任务搜索器",
+    "ReadyCheck": "准备确认",
+    "RecipeNote": "制作笔记",
+    "RecipeProductList": "配方产物列表",
+    "RecommendEquip": "推荐装备",
+    "RecommendList": "推荐内容列表",
+    "ReconstructionBox": "重建物资箱",
+    "Repair": "修理装备",
+    "RepairAuto": "自动修理",
+    "RepairRequest": "委托修理",
+    "ReplayReadyCheck": "回放准备确认",
+    "Request": "委托交付",
+    "RetainerCharacter": "雇员角色信息",
+    "RetainerHistory": "雇员历史记录",
+    "RetainerInputString": "雇员文本输入",
+    "RetainerItemTransferList": "雇员物品转移列表",
+    "RetainerItemTransferProgress": "雇员物品转移进度",
+    "RetainerList": "雇员列表",
+    "RetainerListSort": "雇员列表排序",
+    "RetainerSell": "雇员出售物品",
+    "RetainerSellList": "雇员出售物品列表",
+    "RetainerTaskAsk": "雇员探险委托",
+    "RetainerTaskList": "雇员探险列表",
+    "RetainerTaskResult": "雇员探险结果",
+    "RoadStone": "RoadStone 界面",
+    "RoadStoneResult": "RoadStone · 结果",
+    "SatisfactionList": "满意度列表",
+    "SatisfactionSupply": "满意度交付",
+    "SatisfactionSupplyResult": "满意度交付结果",
+    "ScenarioTree": "主线任务进度",
+    "ScreenInfo_CountDown": "倒计时提示",
+    "SelectIconString": "图标选项菜单",
+    "SelectOk": "确认提示",
+    "SelectOkTitle": "带标题的确认提示",
+    "SelectString": "选项菜单",
+    "SelectYesNoTextScroll": "滚动文本确认",
+    "SelectYesno": "是非确认",
+    "Shop": "商店",
+    "ShopCardDialog": "卡片交易确认",
+    "ShopExchangeCurrency": "货币兑换",
+    "ShopExchangeCurrencyDialog": "货币兑换确认",
+    "ShopExchangeItem": "物品兑换",
+    "ShopExchangeItemDialog": "物品兑换确认",
+    "SkyIslandExchange2": "空岛兑换 2",
+    "Social": "社交",
+    "SocialDetailA": "社交详情 A",
+    "SocialDetailB": "社交详情 B",
+    "SubmarineExplorationMapSelect": "潜水艇探索地图选择",
+    "Synthesis": "制作",
+    "SynthesisSimple": "简易制作",
+    "SynthesisSimpleDialog": "简易制作确认",
+    "SystemMenu": "系统菜单",
+    "Talk": "对话",
+    "TalkAutoMessageSelector": "对话自动消息选择",
+    "TalkAutoMessageSetting": "对话自动消息设置",
+    "Teleport": "传送",
+    "TeleportHousingFriend": "传送至好友住宅",
+    "TeleportSetting": "传送设置",
+    "TelepotTown": "城内传送",
+    "TofuConfig": "战术板设置",
+    "TofuList": "战术板列表",
+    "TofuPreview": "战术板预览",
+    "TofuSaveDialog": "战术板保存确认",
+    "TourismMenu": "观光菜单",
+    "Trade": "交易",
+    "TreasureHighLow": "寻宝大小竞猜",
+    "TreasureMap": "藏宝图",
+    "TripleTriad": "幻卡对战",
+    "TripleTriadCoinExchange": "幻卡 · 代币兑换",
+    "TripleTriadRanking": "幻卡排名",
+    "TripleTriadRequest": "幻卡对战邀请",
+    "TripleTriadResult": "幻卡对战结果",
+    "TripleTriadRule": "幻卡对战规则",
+    "TripleTriadSelDeck": "幻卡牌组选择",
+    "Tryon": "试穿",
+    "TurnBreak": "TurnBreak 界面",
+    "TurnBreakGame": "TurnBreak · 游戏",
+    "TurnBreakTitle": "TurnBreak · 标题",
+    "UfoCatcher": "抓娃娃机",
+    "VVDAction": "VVD · 技能",
+    "VVDFinder": "VVD · 任务搜索",
+    "VVDNotebook": "VVD · 笔记",
+    "VVDVoteRoute": "VVD · 路线投票",
+    "VoteKickReply": "除名投票回应",
+    "VoteMvp": "最优队员投票",
+    "WKSAchievement": "WKS · 成就",
+    "WKSAnnounce": "WKS · 公告",
+    "WKSEnterInfo": "WKS · 进入信息",
+    "WKSHistoryBoard": "WKS · 历史记录板",
+    "WKSHud": "WKS · 界面显示",
+    "WKSLottery": "WKS · 抽奖",
+    "WKSMechaOperationEntryAccept": "WKS · 机甲作业报名确认",
+    "WKSMechaOperationEntryScreen": "WKS · 机甲作业报名窗口",
+    "WKSMechaOperationEntryUI": "WKS · 机甲作业报名界面",
+    "WKSMission": "WKS · 任务",
+    "WKSMissionInfomation": "WKS · 任务信息",
+    "WKSPlanetSelect": "WKS · 行星选择",
+    "WKSPouch": "WKS · 收纳袋",
+    "WKSRecipeNotebook": "WKS · 制作笔记",
+    "WKSReward": "WKS · 报酬",
+    "WKSScoreList": "WKS · 积分列表",
+    "WKSToolCustomize": "WKS · 工具定制",
+    "WeatherReport": "天气预报",
+    "WebLauncher": "网页启动器",
+    "WeeklyBingo": "每周宾果",
+    "WeeklyBingoBonusInfo": "每周宾果 · 奖励信息",
+    "WeeklyBingoContentList": "每周宾果 · 任务列表",
+    "WeeklyBingoResult": "每周宾果 · 结果",
+    "WorldTravelFinderReady": "跨服准备确认",
+    "WorldTravelFinderStatus": "跨服等待状态",
+    "WorldTravelSelect": "跨服目的地选择",
+    "XBMBattleMonsterDetail": "XBM · 战斗怪物详情",
+    "XBMItemDetail": "XBM · 物品详情",
+    "XBMMonsterNotebook": "XBM · 怪物图鉴",
+    "XBMMonsterNotebookFilterSetting": "XBM · 怪物图鉴筛选设置",
+    "_ActionBar": "热键栏 1",
+    "_ActionBar01": "热键栏 2",
+    "_ActionBar02": "热键栏 3",
+    "_ActionBar03": "热键栏 4",
+    "_ActionBar04": "热键栏 5",
+    "_ActionBar05": "热键栏 6",
+    "_ActionBar06": "热键栏 7",
+    "_ActionBar07": "热键栏 8",
+    "_ActionBar08": "热键栏 9",
+    "_ActionBar09": "热键栏 10",
+    "_ActionBarEx": "扩展热键栏",
+    "_ActionContents": "任务技能栏",
+    "_ActionCross": "十字热键栏",
+    "_ActionDoubleCrossL": "双十字热键栏 · 左",
+    "_ActionDoubleCrossR": "双十字热键栏 · 右",
+    "_AllianceList1": "团队列表 1",
+    "_AllianceList2": "团队列表 2",
+    "_BagWidget": "背包与装备快捷按钮",
+    "_CastBar": "咏唱条",
+    "_ContentGauge": "任务量谱",
+    "_DTR": "时钟与服务器信息栏",
+    "_EnemyList": "敌对列表",
+    "_Exp": "经验条",
+    "_FocusTargetInfo": "焦点目标",
+    "_GatheringMasterpieceInfo": "采集收藏品信息",
+    "_HudLayoutWindow": "HUD 布局设置窗口",
+    "_LimitBreak": "极限槽",
+    "_LovmTargetInfo": "萌宠之王 · 目标信息",
+    "_MainCommand": "主指令菜单",
+    "_MainCross": "主菜单",
+    "_Money": "金币",
+    "_NaviMap": "小地图",
+    "_Notification": "通知提示",
+    "_ParameterWidget": "角色参数",
+    "_PartyList": "小队列表",
+    "_Status": "状态效果",
+    "_StatusCustom0": "自定义状态效果栏 1",
+    "_StatusCustom1": "自定义状态效果栏 2",
+    "_StatusCustom2": "自定义状态效果栏 3",
+    "_StatusCustom3": "自定义状态效果栏 4",
+    "_TargetInfo": "目标信息",
+    "_TargetInfoBuffDebuff": "目标状态效果",
+    "_TargetInfoCastBar": "目标咏唱条",
+    "_TargetInfoMainTarget": "目标基本信息",
+    "_ToDoList": "任务列表",
+    "_TofuEditObjectCanvas": "战术板 · 对象编辑画布",
+    "_TofuEditObjectEdit": "战术板 · 对象编辑工具",
+    "_TofuEditObjectLayer": "战术板 · 对象图层",
+    "_TofuObjectList": "战术板 · 对象列表"
+  }
+}

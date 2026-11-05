@@ -639,6 +639,7 @@ td {
   display: grid;
   grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
   gap: 12px;
+  align-items: center;
   min-height: 54px;
   padding: 8px;
   border-bottom: 1px solid var(--line);
@@ -952,10 +953,24 @@ input[type='checkbox'] {
 .list-toolbar input::placeholder {
   color: #687488;
 }
+.file-catalog > .list-toolbar {
+  align-items: flex-end;
+}
+.file-catalog > .list-toolbar .field-label select {
+  min-height: 40px;
+}
+.file-catalog > .list-toolbar .record-count {
+  line-height: 40px;
+}
 .category-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.category-navigation {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px 36px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  column-gap: 20px;
 }
 .navigation-group {
   min-width: 0;
@@ -1091,9 +1106,12 @@ input[type='checkbox'] {
   text-align: center;
 }
 .category-groups .record-link {
-  padding-left: 4px;
-  padding-right: 4px;
-  min-height: 51px;
+  padding: 8px 4px;
+  gap: 8px;
+  min-height: 44px;
+}
+.category-groups .record-link strong {
+  font-size: 13px;
 }
 .detail-sections {
   display: grid;
@@ -1324,9 +1342,6 @@ input[type='checkbox'] {
   .page-heading > .button-group button {
     flex: 1;
     min-height: 42px;
-  }
-  .category-groups {
-    grid-template-columns: minmax(0, 1fr);
   }
   .record-link {
     gap: 10px;

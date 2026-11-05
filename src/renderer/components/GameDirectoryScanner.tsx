@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   GameDirectory,
+  CharacterDirectory,
   DecodeReport,
   DecodeProgress,
   DecodedFileDetail,
@@ -15,6 +16,18 @@ import { fileDescriptions } from './browser-model';
 import { useWorkspaceNavigation } from './workspace-navigation';
 import DatEditor from './DatEditor';
 import { targetMatches } from './edit-target';
+import { formatGameId } from '../../shared/character-label';
+
+function characterLabel(character: CharacterDirectory) {
+  const world =
+    character.homeWorldName ||
+    (character.homeWorldId
+      ? `未知服务器（ID ${character.homeWorldId}）`
+      : null);
+  return (character.names.length ? character.names : [character.contentId])
+    .map((name) => formatGameId(name, world))
+    .join(' / ');
+}
 
 const statusNames = {
   decoded: '可查看',
@@ -534,9 +547,7 @@ export default function GameDirectoryScanner() {
                       {character.names[0]?.slice(0, 1) ?? '角'}
                     </span>
                     <span>
-                      <strong>
-                        {character.names.join(' / ') || '未记录昵称'}
-                      </strong>
+                      <strong>{characterLabel(character)}</strong>
                       <small>
                         {character.contentId} · {character.fileCount} 个文件
                       </small>
@@ -544,7 +555,7 @@ export default function GameDirectoryScanner() {
                     <button
                       className="text-button"
                       onClick={() => reveal(character.path)}
-                      aria-label={`打开${character.names[0] || '角色'}文件夹`}
+                      aria-label={`打开${characterLabel(character)}文件夹`}
                     >
                       打开文件夹
                     </button>
@@ -691,8 +702,7 @@ export default function GameDirectoryScanner() {
                         key={character.contentId}
                         value={character.contentId}
                       >
-                        {character.names.join(' / ') || '角色'} ·{' '}
-                        {character.contentId.slice(-6)}
+                        {characterLabel(character)}
                       </option>
                     ))}
                     <option value="shared">共享与外观预设</option>
@@ -741,8 +751,10 @@ export default function GameDirectoryScanner() {
                         </small>
                       </span>
                       <span className="file-owner">
-                        {character?.names.join(' / ') ||
-                          file.characterId?.slice(-6) ||
+                        {(character && characterLabel(character)) ||
+                          (file.characterId
+                            ? formatGameId(file.characterId, null)
+                            : null) ||
                           (file.category === 'backup' ? '历史备份' : '共享')}
                       </span>
                       <span className={`status-badge ${file.status}`}>

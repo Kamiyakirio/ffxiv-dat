@@ -1,3 +1,5 @@
+import nativeData from './native-save-data.json' with { type: 'json' };
+import { gameName } from './game-data.ts';
 import { decodeUtf8, readSections } from './sections.ts';
 import type { DatDecodeResult, DatSection } from './types.ts';
 
@@ -45,6 +47,32 @@ function sectionBytes(section: DatSection): Buffer {
   return Buffer.from(section.valueHex, 'hex');
 }
 
+function tellRouteDetails(raw: number | null) {
+  if (raw === null) return null;
+  const subtype = raw & 255;
+  const reason =
+    ({ 1: 2, 2: 1, 4: 5, 5: 4 } as Record<number, number>)[subtype] ?? 3;
+  // History cycling gives Foray bit13 priority; reply gives bit14 priority.
+  // 0x140782f6d..783107 / 0x140929358..9294c2. No invented subtype names.
+  return {
+    isForayRoute: (raw & 0x2000) !== 0,
+    hasReplyContextRoute: (raw & 0x4000) !== 0,
+    hasExtendedRouting: (raw & 0xff00) !== 0,
+    networkSubtypeRaw: subtype,
+    mappedTellReason: reason,
+    cycleRoute: raw & 0x2000 ? 'foray' : raw & 0xff00 ? 'extended' : 'normal',
+    replyRoute:
+      raw & 0x4000
+        ? 'extended'
+        : raw & 0x2000
+          ? 'foray'
+          : raw & 0xff00
+            ? 'extended'
+            : 'normal',
+    eligibleForNameContentIdLookup: raw === 1 || subtype === 4,
+  };
+}
+
 export function decodeAcquaintance(
   payload: Buffer,
   version: number,
@@ -55,6 +83,26 @@ export function decodeAcquaintance(
   let index = 0;
   while (index < sections.length && sections[index].tag === 'N') {
     const group = sections.slice(index, index + 7);
+    const nameRaw = group[0].text;
+    const isLastReceivedTell =
+      typeof nameRaw === 'string' && nameRaw.startsWith(' ');
+    // The special receiver slot may consist only of N when WorldId is zero
+    // (writer0x1407ca3c1). A leading space is a marker, not part of the name.
+    if (
+      isLastReceivedTell &&
+      group.map((field) => field.tag).join('') !== 'NWOTCCC'
+    ) {
+      contacts.push({
+        offset: group[0].offset,
+        name: nameRaw.slice(1),
+        nameRaw,
+        isLastReceivedTell: true,
+        hasRoutingData: false,
+        fields: [group[0]],
+      });
+      index++;
+      continue;
+    }
     if (group.map((field) => field.tag).join('') !== 'NWOTCCC') {
       warnings.push(
         `Unknown contact record at payload offset ${sections[index].offset}.`,
@@ -71,31 +119,46 @@ export function decodeAcquaintance(
     const flagsText = group[3].text;
     contacts.push({
       offset: group[0].offset,
-      name: group[0].text,
+      name: isLastReceivedTell ? nameRaw!.slice(1) : nameRaw,
+      nameRaw,
+      isLastReceivedTell,
+      hasRoutingData: true,
+      route: tellRouteDetails(
+        flagsText && /^[0-9A-Fa-f]{4,8}$/.test(flagsText)
+          ? parseInt(flagsText, 16) & 0xffff
+          : null,
+      ),
       worldName: group[1].text,
       worldId:
         worldText && /^[0-9A-Fa-f]+$/.test(worldText)
           ? parseInt(worldText, 16)
           : null,
       worldIdEncoded: worldText,
+      // Target 0x1407c9496..c9655: T -> Acquaintance+0xd2,
+      // three C pieces -> ContentId+0xd8; AccountId+0xe0 is not in C.
+      contentIdHex,
+      contentId:
+        contentIdHex === null ? null : BigInt(`0x${contentIdHex}`).toString(),
+      flagsRaw:
+        flagsText && /^[0-9A-Fa-f]{4,8}$/.test(flagsText)
+          ? parseInt(flagsText, 16) & 0xffff
+          : null,
       unknownT: flagsText,
       unknownCParts: cParts,
       inferred: {
-        // AcquaintanceModule.Acquaintance has Flags (commented ushort at
-        // 0xD2) and ContentId (ulong at 0xD8). The serialized T / C binding
-        // is inferred from those fields and the observed 4/6/6 hex widths;
-        // the game's ReadFile implementation is not available to confirm it.
+        // Legacy aliases. The storage binding is now verified against the
+        // target reader; flagsRaw retains the word without naming its bits.
         contentIdCandidate:
           contentIdHex === null
             ? null
             : {
                 hex: contentIdHex,
                 decimal: BigInt(`0x${contentIdHex}`).toString(),
-                confidence: 'inferred',
+                confidence: 'confirmed-native',
               },
         flagsCandidate:
           flagsText && /^[0-9A-Fa-f]{4}$/.test(flagsText)
-            ? { value: parseInt(flagsText, 16), confidence: 'inferred' }
+            ? { value: parseInt(flagsText, 16), confidence: 'confirmed-native' }
             : null,
       },
       fields: group,
@@ -176,20 +239,55 @@ export function decodeAcquaintance(
         ),
       }
     : null;
-  if (sections.length) {
+  // ACQ writer 0x1407ca6e4 gets McAggreModule via UI vfunc57, writes
+  // 78 then +0x48 u64 and 78 pairs at +0x50 / +0x188. Reader
+  // 0x1407c967c..c9876 restores the exact same columns. These are not
+  // contact timestamps: 0x1407d9f70/9fc0 count main-command uses/failures;
+  // initial use sets +0x48 = Unix seconds + 604800 (seven days).
+  const usageRefs: Record<string, { id: number; name: string }[]> =
+    nativeData.mainCommandUsageReferences;
+  const mainCommandUsage =
+    metadataBlock?.recordCount === 78
+      ? {
+          aggregationDeadlineUnix: metadataBlock.integer64,
+          aggregationDeadlineIso:
+            BigInt(metadataBlock.integer64) < 253402300800n
+              ? new Date(Number(metadataBlock.integer64) * 1000).toISOString()
+              : null,
+          initialAggregationWindowSeconds: 604800,
+          entries: metadataBlock.entries.map((entry) => ({
+            counterIndex: entry.index + 1,
+            useCount: entry.firstValue,
+            failedUseCount: entry.secondValue,
+            commandIdsCandidate: (usageRefs[entry.index + 1] ?? []).map(
+              (ref) => ref.id,
+            ),
+            commandNamesCandidate: (usageRefs[entry.index + 1] ?? [])
+              .map((ref) => ref.name)
+              .join(' / '),
+            fieldOffsets: entry.fieldOffsets,
+          })),
+          referenceBasis: nativeData.source.mainCommandUsageReferenceBasis,
+        }
+      : null;
+  if (sections.length)
     warnings.push(
-      'Contact names and worlds are decoded. T flag bits, the C identifier binding, and the purpose of numeric M records still need confirmation; exact values and boundaries are retained.',
+      'Contact C fields bind to ContentId and T to the stored flags word. The M block is McAggreModule command-use statistics; public table names retain their reference provenance.',
     );
-  }
   return {
     status: sections.length || warnings.length ? 'partial' : 'decoded',
     data: {
-      contacts,
-      contactCount: contacts.length,
+      contacts: contacts.filter((contact) => !contact.isLastReceivedTell),
+      lastReceivedTell:
+        contacts.find((contact) => contact.isLastReceivedTell) ?? null,
+      serializedContacts: contacts,
+      contactCount: contacts.filter((contact) => !contact.isLastReceivedTell)
+        .length,
       additionalFields,
       metadataFields,
       timestampCandidate,
       metadataBlock,
+      mainCommandUsage,
       sections,
     },
     coverage: {
@@ -198,7 +296,20 @@ export function decodeAcquaintance(
         'contacts[].name',
         'contacts[].worldName',
         'contacts[].worldId',
+        'contacts[].contentId',
+        'contacts[].contentIdHex',
+        'contacts[].flagsRaw',
+        'contacts[].route',
+        'lastReceivedTell',
         'contacts[].fields',
+        ...(mainCommandUsage
+          ? [
+              'mainCommandUsage.aggregationDeadlineUnix',
+              'mainCommandUsage.entries.counterIndex',
+              'mainCommandUsage.entries.useCount',
+              'mainCommandUsage.entries.failedUseCount',
+            ]
+          : []),
         ...(metadataBlock
           ? [
               'metadataBlock.recordCount',
@@ -209,32 +320,30 @@ export function decodeAcquaintance(
       ],
       candidateFields: sections.length
         ? [
-            'contacts[].inferred.contentIdCandidate',
-            'contacts[].inferred.flagsCandidate',
-            'timestampCandidate',
+            ...(mainCommandUsage
+              ? ['mainCommandUsage.entries.commandNamesCandidate']
+              : []),
           ]
         : [],
       unknownFields: sections.length
         ? [
             {
-              field: 'contacts[].unknownT',
+              field: 'contacts[].flagsRaw',
               reason:
-                '字段可精确解码为16位值，但每个位的业务含义尚未由读取函数或单项差分证实。',
+                '已确认特殊区域路由、回复上下文位及低字节TellReason映射；网络子类型的完整枚举名和其他高位含义仍待核实。',
               kind: 'meaning',
             },
-            {
-              field: 'contacts[].unknownCParts',
-              reason:
-                '4/6/6十六进制分片可精确拼接64位标识；源码同时含ContentId和AccountId，需进一步确认序列化绑定。',
-              kind: 'reference',
-            },
-            {
-              field: 'metadataBlock',
-              reason: metadataBlock
-                ? '已核实数量与两列数值的记录边界；这组数值的业务用途及64位头字段的时间语义尚未确认。'
-                : '附加M字段未匹配已知的数量/64位头/两列记录格式，原始字段完整保留。',
-              kind: 'meaning',
-            },
+            ...(!mainCommandUsage
+              ? [
+                  {
+                    field: 'metadataBlock',
+                    reason: metadataBlock
+                      ? '记录列可读，但未符合目标McAggreModule固定78项的布局，原值保留。'
+                      : '附加M字段未匹配固定78项的原生布局，原始字段完整保留。',
+                    kind: 'meaning' as const,
+                  },
+                ]
+              : []),
           ]
         : [],
     },
@@ -441,6 +550,12 @@ function decodeRetainerInventory(bytes: Buffer): Record<string, unknown> {
     itemIds: u32s(body.subarray(0x38, 0x2f4)),
     itemCounts: u16s(body.subarray(0x2f4, 0x452)),
     crystalQuantities: u16s(body.subarray(0x452, 0x476)),
+    // Search 0x1407e693d / 69a0 indexes this array by requested ItemId - 2.
+    crystals: u16s(body.subarray(0x452, 0x476)).map((quantity, slot) => ({
+      slot,
+      itemId: slot + 2,
+      quantity,
+    })),
     alignmentHex: body.subarray(0x476).toString('hex'),
   };
 }
@@ -514,6 +629,38 @@ export function decodeItemFinder(
   const additionalFields = sections.slice(cursor);
   if (additionalFields.length)
     warnings.push('Unrecognized fields follow the item finder cache.');
+  const dresserItemIds = u32s(dresser.subarray(0, dresserCount * 4));
+  const missingBits = u16s(dresser.subarray(dresserCount * 4));
+  const setReferences: Record<string, number[]> = nativeData.glamourDresserSets;
+  // 0x1407e7c20..c4d sets the cached bit only when the native
+  // IsSetSlotUnlocked result is FALSE. The old UnlockBits name is inverted.
+  const outfitSets = dresserItemIds.flatMap((storedId, slot) => {
+    if (!storedId) return [];
+    const itemId = storedId % 500000,
+      parts = setReferences[itemId];
+    if (!parts) return [];
+    return [
+      {
+        slot,
+        itemId,
+        missingBitsRaw: missingBits[slot],
+        missingPartCount: parts.filter(
+          (id, index) => id && missingBits[slot] & (1 << index),
+        ).length,
+        components: parts.flatMap((partId, componentIndex) =>
+          partId
+            ? [
+                {
+                  componentIndex,
+                  itemId: partId,
+                  isStored: (missingBits[slot] & (1 << componentIndex)) === 0,
+                },
+              ]
+            : [],
+        ),
+      },
+    ];
+  });
   return {
     status: warnings.length ? 'partial' : 'decoded',
     data: {
@@ -534,8 +681,11 @@ export function decodeItemFinder(
       glamourDresserFormatVersion,
       glamourDresser: {
         offset: dresserSection.offset,
-        itemIds: u32s(dresser.subarray(0, dresserCount * 4)),
-        itemSetUnlockBits: u16s(dresser.subarray(dresserCount * 4)),
+        itemIds: dresserItemIds,
+        itemSetMissingBits: missingBits,
+        itemSetUnlockBits: missingBits, // Compatibility alias; set bits mean missing.
+        outfitSets,
+        setReferenceBasis: nativeData.source.glamourDresserSetReferenceBasis,
       },
       cabinetFormatVersion,
       cabinet: {
@@ -557,32 +707,35 @@ export function decodeItemFinder(
         'retainers[].itemIds',
         'retainers[].itemCounts',
         'retainers[].crystalQuantities',
+        'retainers[].crystals.itemId',
         'saddleBag.itemIds',
         'saddleBag.itemCounts',
         'premiumSaddleBag.itemIds',
         'premiumSaddleBag.itemCounts',
         'glamourDresser.itemIds',
+        'glamourDresser.itemSetMissingBits (bits0..10: one means missing)',
         'cabinet.cabinetIds',
       ],
-      candidateFields: [],
+      candidateFields: outfitSets.length
+        ? [
+            'glamourDresser.outfitSets.components.itemId (public reference table)',
+          ]
+        : [],
       unknownFields: [
-        {
-          field: 'glamourDresser.itemSetUnlockBits',
-          reason:
-            '已完整读取每项16位状态值；各位的业务含义未在当前结构源码定义。',
-          kind: 'meaning',
-        },
+        ...(missingBits.some((bits) => (bits & ~0x7ff) !== 0)
+          ? [
+              {
+                field: 'glamourDresser.itemSetMissingBits high bits',
+                reason: '出现已确认11个套装部件位之外的高位，保留原值。',
+                kind: 'meaning' as const,
+              },
+            ]
+          : []),
         {
           field: 'retainers[].alignmentHex',
           reason:
             '每条雇员记录末尾2字节保留；不影响已读取的物品ID、数量及水晶数量。',
           kind: 'storage',
-        },
-        {
-          field: 'retainers[].crystalQuantities[] -> crystal ItemId',
-          reason:
-            '18个数量已由结构源码确认；槽位到水晶物品编号的映射缺少独立的正值样本或读函数验证。',
-          kind: 'reference',
         },
         ...(additionalFields.length
           ? [
@@ -635,6 +788,9 @@ export function decodeLogFilter(
       filterStates,
       filters: filterStates.map((rawState, filterId) => ({
         filterId,
+        isEditableSetting:
+          (rawState === 0 || rawState === 1) &&
+          !!gameName('LogFilter', filterId),
         rawState,
         enabled: rawState === 1 ? true : rawState === 0 ? false : null,
         stateLabel:

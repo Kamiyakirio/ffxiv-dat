@@ -953,7 +953,7 @@ test('complete DAT routing preserves native AOZNOTE, GRPPOS and framed UIDATA in
     readable.some(
       (section) =>
         section.sourceId === '4' &&
-        section.rows.some((row) => row.name === '联系人昵称'),
+        section.rows.some((row) => row.name === '联系人昵称@海猫茶屋'),
     ),
   );
 });
