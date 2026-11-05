@@ -15,6 +15,7 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/index.css';
+import './styles/management.css';
 
 const target = document.getElementById('app');
 

@@ -243,7 +243,7 @@ export default function DecodedContent({
                 disabled={openingEditor}
                 onClick={() => onEdit(node.editTarget!)}
               >
-                {openingEditor ? '正在准备…' : '编辑'}
+                {openingEditor ? '正在读取…' : '编辑'}
               </button>
             )}
           {!editor && <button onClick={showTechnical}>技术数据</button>}
@@ -434,12 +434,8 @@ export default function DecodedContent({
           !node.sections?.some((s) => s.rows.length) &&
           node.code === undefined && (
             <div className="page-empty">
-              <h3>{node.empty ? '没有保存的记录' : '暂时没有可读内容'}</h3>
-              <p>
-                {node.empty
-                  ? '此类别在当前文件中为空。'
-                  : '此类别已保留原始数据，尚未确认的字段可在技术数据中查看。'}
-              </p>
+              <h3>{node.empty ? '没有保存的记录' : '没有可读内容'}</h3>
+              {!node.empty && <p>字段尚未解析，可查看技术数据。</p>}
               <button onClick={showTechnical}>查看技术数据</button>
             </div>
           )}

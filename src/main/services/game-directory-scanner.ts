@@ -2,11 +2,7 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
-const targetFolders = [
-  'game',
-  'my games',
-  'final fantasy xiv - a realm reborn',
-];
+const targetFolders = ['my games', 'final fantasy xiv - a realm reborn'];
 const concurrency = 16;
 
 function getDiskRoots(): string[] {

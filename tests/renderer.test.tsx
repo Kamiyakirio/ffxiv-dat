@@ -17,7 +17,7 @@ import type {
   DecodeProgress,
   EditableField,
 } from '../src/shared/types';
-import App from '../src/renderer/App';
+import App from '../src/renderer/components/GameDirectoryScanner';
 import DecodedContent from '../src/renderer/components/DecodedContent';
 import JsonTree from '../src/renderer/components/JsonTree';
 import DatEditor from '../src/renderer/components/DatEditor';
@@ -457,7 +457,7 @@ test('saving validates the selected record, refreshes hashes and keeps its page 
     target: { value: '2' },
   });
   fireEvent.click(ui().getByRole('button', { name: '保存并备份' }));
-  await ui().findByText('保存成功，已备份原文件。');
+  await ui().findByText('已保存，原文件已备份。');
   assert.equal(pageHeading().textContent, '自身战斗特效');
   assert.equal(ui().queryByRole('region', { name: 'DAT 编辑器' }), null);
   assert.deepEqual(api.save.mock.calls[0].arguments, [

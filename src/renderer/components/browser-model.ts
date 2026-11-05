@@ -611,12 +611,10 @@ function buildRoot(detail: DecodedFileDetail): BrowserNode {
         };
       if (segment.id === 23) {
         node.children = portraits(detail, segment, si);
-        node.description = '每份肖像独立查看外观、镜头、灯光与关联信息。';
         return node;
       }
       if (segment.id === 28) {
         node.children = boards(segment, si);
-        node.description = '打开一块战术板，再查看其中的对象与布局。';
         return node;
       }
       if (
@@ -630,8 +628,7 @@ function buildRoot(detail: DecodedFileDetail): BrowserNode {
       ) {
         node.children = [];
         node.readOnlyData = true;
-        node.description =
-          '此类别的业务字段尚未确认，可在技术数据中查看原始记录。';
+        node.description = '字段含义未确认，可查看技术数据。';
         return node;
       }
       const result = withReadableSections(

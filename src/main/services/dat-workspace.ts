@@ -308,6 +308,27 @@ export class DatWorkspace {
     );
   }
 
+  async gameDirectory(directory: string): Promise<GameDirectory> {
+    const known = this.directories.get(directory);
+    if (!known || (await realpath(directory)) !== directory)
+      throw new Error('请先扫描或选择游戏配置目录。');
+    return known;
+  }
+
+  async characterDirectory(directory: string): Promise<CharacterDirectory> {
+    for (const root of this.directories.values()) {
+      const character = root.characters.find(
+        (entry) => entry.path === directory,
+      );
+      if (!character) continue;
+      await this.gameDirectory(root.path);
+      if ((await realpath(directory)) !== directory)
+        throw new Error('角色目录位置已改变，请重新选择。');
+      return character;
+    }
+    throw new Error('请先扫描或选择这个角色的配置目录。');
+  }
+
   getResult(id: string): DecodedFileDetail {
     const result = this.results.get(id);
     if (!result) throw new Error('这份结果已失效，请重新开始解码。');

@@ -8,6 +8,11 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { DatWorkspace } from '../src/main/services/dat-workspace.ts';
 import {
+  changePortraitData,
+  exportPortraitCode,
+  readPortraitData,
+} from '../src/main/services/portrait-data.ts';
+import {
   buildFileNode,
   resolveNode,
   hasTarget,
@@ -19,6 +24,39 @@ import {
 } from './helpers/assertions.ts';
 
 const corpusPath = path.join(os.homedir(), 'Downloads', 'My Games');
+
+test(
+  'real portraits export and overwrite in memory without changing a single UISAVE byte',
+  {
+    skip:
+      !existsSync(corpusPath) && '真实 DAT 语料未提供；本地只读回归未执行。',
+  },
+  async (t) => {
+    const workspace = new DatWorkspace();
+    const directory = await workspace.locate(corpusPath);
+    let portraits = 0;
+    for (const character of directory.characters) {
+      const filename = path.join(character.path, 'UISAVE.DAT');
+      const bytes = await readFile(filename);
+      const ids = readPortraitData(bytes).records.map((record) => record.id);
+      if (!ids.length) continue;
+      const code = exportPortraitCode(bytes, ids);
+      assert(!code.includes(':'));
+      const result = changePortraitData(bytes, {
+        type: 'import',
+        code,
+        mode: 'overwrite',
+        targetIds: ids,
+      });
+      assert.deepEqual(result, bytes);
+      assert.deepEqual(await readFile(filename), bytes);
+      portraits += ids.length;
+    }
+    t.diagnostic(
+      `只读肖像回归：${directory.characters.length} 个角色，${portraits} 个肖像，分享码往返结果逐字节一致。`,
+    );
+  },
+);
 
 // Report file kinds only. Backup/config-copy filenames themselves contain IDs.
 function fileKind(filename: string) {

@@ -126,7 +126,7 @@ function FileViewer({
         targetMatches(field.id, target),
       );
       if (!fields.length) {
-        setError('当前记录没有已验证的可编辑字段，可在技术数据中查看原值。');
+        setError('此记录暂不支持编辑，可查看技术数据。');
         return;
       }
       setEditing({
@@ -251,7 +251,13 @@ function FileViewer({
   );
 }
 
-export default function GameDirectoryScanner() {
+export default function GameDirectoryScanner({
+  embedded = false,
+  onNavigationGuard,
+}: {
+  embedded?: boolean;
+  onNavigationGuard?: (guard: (() => boolean) | null) => void;
+} = {}) {
   const [directories, setDirectories] = useState<GameDirectory[]>([]);
   const [selectedPath, setSelectedPath] = useState('');
   const [scanning, setScanning] = useState(!!window.gameDirectory);
@@ -306,8 +312,7 @@ export default function GameDirectoryScanner() {
 
   function canLeave(preserveView = false) {
     if (saving) return false;
-    if (dirty && !window.confirm('有未保存的修改，确定放弃这些修改吗？'))
-      return false;
+    if (dirty && !window.confirm('放弃未保存的修改？')) return false;
     if (dirty) setDirty(false);
     if (!preserveView && (dirty || editingActive)) {
       setViewEpoch((value) => value + 1);
@@ -318,7 +323,7 @@ export default function GameDirectoryScanner() {
   function saved(result: DatSaveResult) {
     setReport(result.report);
     setDirty(false);
-    setSaveMessage('保存成功，已备份原文件。');
+    setSaveMessage('已保存，原文件已备份。');
     setBackupPath(result.backupPath);
   }
 
@@ -341,8 +346,8 @@ export default function GameDirectoryScanner() {
           const description = message(reason);
           setError(
             /abort/i.test(description)
-              ? '扫描已停止，可以手动选择文件夹。'
-              : `扫描失败：${description}。也可以手动选择文件夹。`,
+              ? '扫描已停止。'
+              : `扫描失败：${description}。请手动选择文件夹。`,
           );
         },
       )
@@ -376,6 +381,8 @@ export default function GameDirectoryScanner() {
     try {
       const selected = await window.gameDirectory.choose();
       if (selected) {
+        invalidateScan();
+        setScanning(false);
         setDirectories((entries) =>
           entries.some((entry) => entry.path === selected.path)
             ? entries.map((entry) =>
@@ -445,13 +452,20 @@ export default function GameDirectoryScanner() {
     setQuery(nextQuery);
   }
 
+  useEffect(() => {
+    onNavigationGuard?.(() => !decoding && !choosing && canLeave());
+    return () => onNavigationGuard?.(null);
+  });
+
   return (
     <section className="workspace">
-      <header className="app-header">
-        <div>
-          <h1>FFXIV DAT Manager</h1>
-        </div>
-      </header>
+      {!embedded && (
+        <header className="app-header">
+          <div>
+            <h1>FFXIV DAT Manager</h1>
+          </div>
+        </header>
+      )}
       {report && (
         <div className="workspace-status">
           <span>
@@ -471,9 +485,6 @@ export default function GameDirectoryScanner() {
           <div className="section-heading">
             <div>
               <h2 id="directory-title">游戏配置目录</h2>
-              <p className="muted">
-                扫描本机游戏配置，或手动选择包含 FFXIV_CHR 文件夹的目录。
-              </p>
             </div>
             <div className="button-group">
               {scanning && <button onClick={stopScan}>停止扫描</button>}
@@ -497,7 +508,7 @@ export default function GameDirectoryScanner() {
           {scanning ? (
             <div className="locating" role="status">
               <span className="spinner" />
-              正在查找游戏配置，请稍候…
+              正在查找游戏配置…
             </div>
           ) : directory ? (
             <>
@@ -681,9 +692,6 @@ export default function GameDirectoryScanner() {
               <header className="page-heading">
                 <div>
                   <h2>配置文件</h2>
-                  <p className="page-description">
-                    选择角色和文件，逐层查看或编辑配置。
-                  </p>
                 </div>
               </header>
               <div className="list-toolbar">
@@ -770,7 +778,7 @@ export default function GameDirectoryScanner() {
               {!visibleFiles.length && (
                 <div className="page-empty">
                   <h3>没有匹配的文件</h3>
-                  <p>尝试其他角色或清除搜索条件。</p>
+                  <p>更换角色或清空搜索条件。</p>
                   <button onClick={() => changeFilters('all', '')}>
                     显示全部文件
                   </button>

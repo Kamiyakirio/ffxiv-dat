@@ -215,7 +215,7 @@ export default function DatEditor({
     <section className="dat-editor" aria-label="DAT 编辑器" aria-busy={saving}>
       {contextLabel && showContextHeading && <h3>正在编辑：{contextLabel}</h3>}
       <div className="editor-notes">
-        <p>保存前请退出游戏。保存时会自动备份，并检查文件是否被外部修改。</p>
+        <p>保存前请退出游戏，原文件会自动备份。</p>
         {model.notes
           .filter((note) => !note.startsWith('仅开放已确认的存储字段'))
           .map((note) => (
@@ -223,11 +223,7 @@ export default function DatEditor({
           ))}
       </div>
       {!model.fields.length ? (
-        <p>
-          {contextLabel
-            ? '当前项目没有已验证的可编辑字段。'
-            : '此文件没有已验证的可编辑字段。'}
-        </p>
+        <p>{contextLabel ? '此项暂不支持编辑。' : '此文件暂不支持编辑。'}</p>
       ) : (
         <>
           {!compact && (
@@ -271,7 +267,7 @@ export default function DatEditor({
           )}
           {!compact && (
             <p className="muted">
-              {model.fields.length.toLocaleString()} 个可编辑字段 · 当前匹配{' '}
+              {model.fields.length.toLocaleString()} 个字段 · 匹配{' '}
               {filtered.length.toLocaleString()} 个
             </p>
           )}
@@ -457,7 +453,7 @@ export default function DatEditor({
       )}
       <footer className="editor-actions">
         <span role="status">
-          {saving ? '正在备份、校验并保存…' : `${changes.length} 项未保存修改`}
+          {saving ? '正在保存…' : `${changes.length} 项未保存修改`}
         </span>
         <div className="button-group">
           <button disabled={saving} onClick={onCancel}>
