@@ -10,6 +10,21 @@ const jobs: Record<string, { classJobId: number; name: string }> =
   targetData.jobs;
 const glassesStyles: Record<string, { slotIndex: number; name: string }> =
   targetData.glassesStyles;
+const menuEntries: Record<
+  string,
+  {
+    addonRowId: number;
+    name: string | null;
+    helpAddonRowId: number;
+    nativeListIndex: number;
+    flagsRaw: number[];
+  }
+> = targetData.itemContextEntries;
+const pvpGroups: Record<string, number> = targetData.pvpRoleGroupByClassJob;
+const pvpActions: Record<
+  string,
+  { index: number; actionId: number; name: string | null }[]
+> = targetData.pvpRoleActions;
 
 function coverage(
   knownFields: string[],
@@ -31,6 +46,11 @@ export function decodeNativeUiSegment(
   // 0x140800950 writes all 0x120 bytes, including the final 256-bit bitmap.
   // 0x140800b70 walks two 128-byte, zero-terminated menu priority arrays.
   if (id === 6 && version === 90 && data.length === 288) {
+    // Getter 0x140800180..324 passes bit(menuId) as descriptor+0xc;
+    // 0x140498067 / 0x1404ec767 skip dispatch when this byte is zero.
+    // Setter 0x140800430..503 saves that same display-permission byte.
+    const allowed = (menuId: number) =>
+      (data[256 + (menuId >>> 3)] & (1 << (menuId & 7))) !== 0;
     const tiers = [0, 1].map((tier) => {
       const offset = tier * 128;
       const values = [...data.subarray(offset, offset + 128)];
@@ -45,12 +65,31 @@ export function decodeNativeUiSegment(
           index,
           offset: offset + index,
           menuEntryId,
+          name: menuEntries[menuEntryId]?.name ?? null,
+          addonRowId: menuEntries[menuEntryId]?.addonRowId ?? null,
+          helpAddonRowId: menuEntries[menuEntryId]?.helpAddonRowId ?? null,
+          nativeListIndex: menuEntries[menuEntryId]?.nativeListIndex ?? null,
+          allowedInMenu: allowed(menuEntryId),
         })),
       };
     });
     return {
       layoutBasis,
       tiers,
+      usesDefaultMenu: tiers[0].count === 0,
+      defaultMenuEntries: targetData.itemContextDefaultOrder.map(
+        (menuEntryId, index) => ({
+          index,
+          menuEntryId,
+          name: menuEntries[menuEntryId]?.name ?? null,
+          addonRowId: menuEntries[menuEntryId]?.addonRowId ?? null,
+          allowedInMenu: menuEntries[menuEntryId]?.flagsRaw[0] === 1,
+        }),
+      ),
+      visibilityBitmaskHex: data.subarray(256).toString('hex'),
+      visibleMenuEntryIds: Array.from({ length: 69 }, (_, id) => id + 1).filter(
+        allowed,
+      ),
       customizationBitmaskHex: data.subarray(256).toString('hex'),
       customizedEntryIndices: Array.from(
         { length: 256 },
@@ -62,16 +101,35 @@ export function decodeNativeUiSegment(
         [
           'tiers',
           'tiers.entries.menuEntryId',
+          'tiers.entries.addonRowId',
+          'tiers.entries.name (fixed public Addon text)',
+          'tiers.entries.allowedInMenu',
+          'visibleMenuEntryIds',
+          'usesDefaultMenu / defaultMenuEntries (native default lookup)',
           'customizationBitmaskHex',
           'customizedEntryIndices',
         ],
         [
-          {
-            field: 'tiers.entries.menuEntryId / customizedEntryIndices',
-            reason:
-              '客户端已证实菜单优先级数组、零终止规则和位图读取；菜单编号与具体菜单文字、位图业务用途尚未映射。',
-            kind: 'meaning',
-          },
+          ...tiers
+            .flatMap((tier) => tier.entries)
+            .filter((entry) => !menuEntries[entry.menuEntryId])
+            .map((entry) => ({
+              field: `tiers.entries.menuEntryId ${entry.menuEntryId}`,
+              reason: '此存档编号不在目标客户端0..69菜单表中，原值已保留。',
+              kind: 'meaning' as const,
+            })),
+          ...(Array.from({ length: 256 }, (_, id) => id).some(
+            (id) => (id === 0 || id >= 70) && allowed(id),
+          )
+            ? [
+                {
+                  field: 'visibilityBitmaskHex reserved menu IDs',
+                  reason:
+                    '位图表示菜单项显示许可，0为哨兵而70..255没有当前目标菜单定义；额外置位的原值保留。',
+                  kind: 'meaning' as const,
+                },
+              ]
+            : []),
         ],
       ),
     };
@@ -88,7 +146,53 @@ export function decodeNativeUiSegment(
       offset: 16 + index,
       selectionRaw: data[16 + index],
       selectedIndex: data[16 + index] === 0 ? null : data[16 + index] - 1,
+      selectionKind: 'role-action',
+      roleGroupIndexCandidate: jobs[index + 1]
+        ? (pvpGroups[jobs[index + 1].classJobId] ?? null)
+        : null,
+      selectedActionIdCandidate:
+        data[16 + index] === 0
+          ? null
+          : (pvpActions[String(pvpGroups[jobs[index + 1]?.classJobId])]?.find(
+              (choice) => choice.index === data[16 + index] - 1,
+            )?.actionId ?? null),
+      selectedActionNameCandidate:
+        data[16 + index] === 0
+          ? null
+          : (pvpActions[String(pvpGroups[jobs[index + 1]?.classJobId])]?.find(
+              (choice) => choice.index === data[16 + index] - 1,
+            )?.name ?? null),
     }));
+    const pvpCoverage = coverage(
+      [
+        'formatVersion',
+        'recordType',
+        'stateEntries.offset',
+        'stateEntries.jobIndex',
+        'stateEntries.classJobId',
+        'stateEntries.selectionRaw',
+        'stateEntries.selectedIndex',
+        'stateEntries.selectionKind',
+      ],
+      [
+        {
+          field: 'stateEntries.selectedActionCandidate',
+          reason:
+            '职能技能的选择含义由原生消费者确认；名称关联使用固定公开表，尚未重新核对目标版本SqPack。',
+          kind: 'reference',
+        },
+        {
+          field: 'prefix / unknownTailHex',
+          reason: '内部其余头字段和未复制的尾部4字节保留原值。',
+          kind: 'storage',
+        },
+      ],
+    );
+    pvpCoverage.candidateFields = [
+      'stateEntries.roleGroupIndexCandidate',
+      'stateEntries.selectedActionIdCandidate',
+      'stateEntries.selectedActionNameCandidate',
+    ];
     return {
       layoutBasis,
       formatVersion: data.readUInt16LE(2),
@@ -105,6 +209,7 @@ export function decodeNativeUiSegment(
         ),
       },
       stateEntries,
+      lookupSource: targetData.source.publicTextSource,
       // Retain the legacy raw byte view, including the four untouched bytes.
       byteValues: Array.from({ length: 50 }, (_, index) => ({
         index,
@@ -113,31 +218,7 @@ export function decodeNativeUiSegment(
       })),
       unknownTailHex: data.subarray(62).toString('hex'),
       completePartition: true,
-      coverage: coverage(
-        [
-          'formatVersion',
-          'recordType',
-          'stateEntries.offset',
-          'stateEntries.jobIndex',
-          'stateEntries.classJobId',
-          'stateEntries.selectionRaw',
-          'stateEntries.selectedIndex',
-        ],
-        [
-          {
-            field: 'stateEntries.selectedIndex / unmapped job indices',
-            reason:
-              '槽位按目标ClassJob表的JobIndex对应职业；选择值0表示未设置、非零值减1。选择项的界面名称和目标表以外的预留职业槽尚未确认。',
-            kind: 'meaning',
-          },
-          {
-            field: 'prefix / unknownTailHex',
-            reason:
-              '内部头的其余字节与末尾4字节完整保留；客户端未将末尾4字节复制进设置数组。',
-            kind: 'storage',
-          },
-        ],
-      ),
+      coverage: pvpCoverage,
     };
   }
 

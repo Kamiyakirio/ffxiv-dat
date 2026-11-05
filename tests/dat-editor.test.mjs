@@ -249,9 +249,9 @@ test('portrait edits round-trip half floats and RGB while leaving record keys, c
     .chunks[0].records[0];
   assert.equal(r.recordKeyRaw, 7);
   assert.equal(r.checksum, 0x04030201);
-  assert.equal(r.unknownTag24, 2);
+  assert.equal(r.flagsRaw, 0);
   assert.equal(r.cameraPosition[0], 1.125);
-  assert.deepEqual(r.directionalLightingColour, [255, 2, 3, 0xa5]);
+  assert.deepEqual(r.ambientLightingColour, [255, 2, 3, 0xa5]);
   assert.throws(
     () => edit(source, 'UISAVE.DAT', { 'ui.0.banner.0.0.24': 3 }),
     /只读/,
@@ -443,4 +443,273 @@ test('strategy board edits respect odd field alignment and preserve unknown obje
   assert.equal(r.objects[0].argsA, 321);
   assert.equal(r.fields.find((f) => f.tag === 1).alignmentByte, 0xa5);
   assert.equal(output.length, source.length);
+});
+
+function portraitFixture(fields) {
+  const header = Buffer.alloc(16),
+    body = Buffer.concat([word(0), word(7), ...fields]);
+  header.writeUInt32LE(body.length, 4);
+  return uisave([
+    [23, 0, Buffer.concat([header, body]), true],
+    [32, 0, Buffer.from([10])],
+  ]);
+}
+function portraitRecord(bytes) {
+  return decodeDat(bytes, 'UISAVE.DAT').result.data.segments[0].data.chunks[0]
+    .records[0];
+}
+function nativeBannerName(value, tail) {
+  const text = Buffer.from(value),
+    body = Buffer.alloc((text.length + 4) & ~3);
+  text.copy(body);
+  if (tail) Buffer.from(tail).copy(body, text.length + 1);
+  return Buffer.concat([word(1), word(body.length), body]);
+}
+
+test('portrait names use exact four-byte UTF-8 padding and clear old tail bytes across growth and shrink', () => {
+  const original = portraitFixture([
+    nativeBannerName('A', [0xde, 0xad]),
+    word(2),
+    word(9),
+    word(24),
+    word(2),
+    word(0x8080),
+  ]);
+  const nameKey = 'ui.0.banner.0.0.1';
+  assert.equal(
+    createEditPlan(original, 'UISAVE.DAT').fields.find(
+      (field) => field.id === nameKey,
+    ).maxBytes,
+    63,
+  );
+  for (const value of ['中文名X', 'ABCD', '中文名字长些', 'B', '']) {
+    const edited = edit(original, 'UISAVE.DAT', { [nameKey]: value }),
+      r = portraitRecord(edited),
+      length = Buffer.byteLength(value);
+    assert.equal(r.bannerTimelineName, value);
+    assert.equal(r.nameByteLength, length);
+    assert.equal(r.nameStorageByteLength, (length + 4) & ~3);
+    assert.equal(r.namePaddingHex, '00'.repeat(((length + 4) & ~3) - length));
+    assert.equal(r.bannerBg, 9);
+    assert.equal(r.flagsRaw, 0x8080);
+    const parsed = decodeDat(edited, 'UISAVE.DAT').result.data;
+    assert.equal(parsed.completeContainer, true);
+    assert.equal(parsed.segments[1].data.countdownLength, 10);
+    assert.equal(parsed.segments[0].trailerHex, 'aa000000');
+  }
+  const limit = '中'.repeat(21);
+  assert.equal(
+    portraitRecord(edit(original, 'UISAVE.DAT', { [nameKey]: limit }))
+      .nameStorageByteLength,
+    64,
+  );
+  assert.throws(
+    () => edit(original, 'UISAVE.DAT', { [nameKey]: '中'.repeat(22) }),
+    /63 字节/,
+  );
+  assert.throws(
+    () => edit(original, 'UISAVE.DAT', { [nameKey]: 'x'.repeat(64) }),
+    /63 字节/,
+  );
+});
+
+test('portrait byte-valued settings preserve unused high bytes and use the correct lighting labels', () => {
+  const original = portraitFixture([
+    word(7),
+    word(0x1234),
+    word(10),
+    word(0x5678),
+    word(15),
+    word(0x90ab),
+    word(17),
+    word(0xcdef),
+    word(14),
+    Buffer.from([1, 2, 3, 0xa5]),
+    word(16),
+    Buffer.from([4, 5, 6, 0x5a]),
+  ]);
+  const plan = createEditPlan(original, 'UISAVE.DAT');
+  assert.equal(
+    plan.fields.find((field) => field.id === 'ui.0.banner.0.0.15').label,
+    '环境光亮度',
+  );
+  assert.equal(
+    plan.fields.find((field) => field.id === 'ui.0.banner.0.0.17').label,
+    '定向光亮度',
+  );
+  assert.equal(
+    plan.fields.find((field) => field.id === 'ui.0.banner.0.0.14.0').label,
+    '环境光 红',
+  );
+  assert.equal(
+    plan.fields.find((field) => field.id === 'ui.0.banner.0.0.16.0').label,
+    '定向光 红',
+  );
+  assert.equal(
+    plan.fields.find((field) => field.id === 'ui.0.banner.0.0.7').max,
+    255,
+  );
+  const edited = edit(original, 'UISAVE.DAT', {
+    'ui.0.banner.0.0.7': 1,
+    'ui.0.banner.0.0.10': 2,
+    'ui.0.banner.0.0.15': 3,
+    'ui.0.banner.0.0.17': 4,
+    'ui.0.banner.0.0.14.0': 5,
+    'ui.0.banner.0.0.16.0': 6,
+  });
+  const r = portraitRecord(edited);
+  assert.equal(r.expression, 1);
+  assert.equal(r.cameraZoom, 2);
+  assert.equal(r.ambientLightingBrightness, 3);
+  assert.equal(r.directionalLightingBrightness, 4);
+  assert.equal(r.fields.find((field) => field.tag === 7).valueHex, '0112');
+  assert.equal(r.fields.find((field) => field.tag === 10).valueHex, '0256');
+  assert.equal(r.fields.find((field) => field.tag === 15).valueHex, '0390');
+  assert.equal(r.fields.find((field) => field.tag === 17).valueHex, '04cd');
+  assert.deepEqual(r.ambientLightingColour, [5, 2, 3, 0xa5]);
+  assert.deepEqual(r.directionalLightingColour, [6, 5, 6, 0x5a]);
+  assert.throws(
+    () => edit(original, 'UISAVE.DAT', { 'ui.0.banner.0.0.10': 256 }),
+    /范围/,
+  );
+});
+
+test('portrait float progress permits values beyond one, signed times remain signed and default-preset edits preserve unknown bits', () => {
+  const progress = Buffer.alloc(4);
+  progress.writeFloatLE(171.349);
+  const original = portraitFixture([
+    word(6),
+    progress,
+    word(21),
+    Buffer.from([255, 255, 255, 255]),
+    word(24),
+    word(2),
+    word(0xa502),
+  ]);
+  const progressKey = 'ui.0.banner.0.0.6',
+    flagKey = 'ui.0.banner.0.0.24.useDefaultPreset',
+    timeKey = 'ui.0.banner.0.0.21';
+  const plan = createEditPlan(original, 'UISAVE.DAT');
+  assert.ok(plan.fields.find((f) => f.id === progressKey).max > 171.349);
+  assert.equal(plan.fields.find((f) => f.id === timeKey).value, -1);
+  assert.equal(plan.fields.find((f) => f.id === flagKey).value, false);
+  const result = portraitRecord(
+    edit(original, 'UISAVE.DAT', {
+      [progressKey]: 234.5,
+      [timeKey]: -123,
+      [flagKey]: true,
+    }),
+  );
+  assert.equal(result.animationProgress, 234.5);
+  assert.equal(result.lastUpdatedUnix, -123);
+  assert.equal(result.flagsRaw, 0xa503);
+  assert.equal(result.unknownFlags, 0xa502);
+  assert.equal(result.useDefaultPreset, true);
+  assert.equal(result.fields.find((f) => f.tag === 24).declaredLength, 2);
+  const negative = portraitRecord(
+    edit(original, 'UISAVE.DAT', { [progressKey]: -2.5 }),
+  );
+  assert.equal(negative.animationProgress, -2.5);
+  assert.throws(
+    () => edit(original, 'UISAVE.DAT', { [timeKey]: 0x80000000 }),
+    /范围/,
+  );
+});
+
+test('GRPPOS editing exposes confirmed camera values and XYZ only, preserving internal parameters and all vector alignment bytes', () => {
+  for (const innerMasked of [false, true]) {
+    const pose = Buffer.alloc(240, 0xa5);
+    for (const [offset, value] of [
+      [4, 8],
+      [8, 0.75],
+      [12, 123.25],
+      [16, 1],
+      [20, -0.5],
+      [24, 24.25],
+      [28, 28.25],
+      [32, -2.5],
+      [48, 1],
+      [52, 2],
+      [56, 3],
+    ])
+      pose.writeFloatLE(value, offset);
+    pose.writeUInt32LE(0xdeadbeef, 60);
+    for (let light = 0; light < 3; light++)
+      pose.writeUInt32LE(0xabcdef00 + light, 124 + light * 48);
+    const source = uisave([[15, 100, pose, innerMasked]]),
+      plan = createEditPlan(source, 'UISAVE.DAT'),
+      ids = plan.fields.map((field) => field.id);
+    assert.deepEqual(
+      ids.filter((id) => /^ui\.0\.cameraPosition\d+$/.test(id)),
+      ['ui.0.cameraPosition0', 'ui.0.cameraPosition1', 'ui.0.cameraPosition2'],
+    );
+    assert.equal(
+      ids.filter((id) => /^ui\.0\.light\.\d\.position\d$/.test(id)).length,
+      9,
+    );
+    for (const id of [
+      'cameraDistance',
+      'cameraFieldOfView',
+      'cameraDirectionHorizontal',
+      'cameraDirectionVertical',
+    ])
+      assert(ids.includes(`ui.0.${id}`));
+    assert(
+      !ids.some((id) =>
+        /cameraAngle|cameraRotation|cameraParameter|cameraPosition3|light\.\d\.position3/.test(
+          id,
+        ),
+      ),
+    );
+    assert(!plan.fields.some((field) => /位置 W/.test(field.label)));
+    assert.deepEqual(plan.apply([]), source);
+    for (const id of [
+      'ui.0.cameraAngle',
+      'ui.0.cameraRotation',
+      'ui.0.cameraPosition3',
+      'ui.0.light.2.position3',
+    ])
+      assert.throws(() => plan.apply([{ id, value: 7 }]), /只读/);
+    const changes = {
+        'ui.0.cameraDistance': 12.5,
+        'ui.0.cameraFieldOfView': 0.875,
+        'ui.0.cameraDirectionHorizontal': 2.25,
+        'ui.0.cameraDirectionVertical': -1.25,
+        'ui.0.cameraPosition0': 10,
+        'ui.0.cameraPosition1': 20,
+        'ui.0.cameraPosition2': 30,
+        'ui.0.light.0.position0': 100,
+        'ui.0.light.1.position1': 200,
+        'ui.0.light.2.position2': 300,
+      },
+      output = edit(source, 'UISAVE.DAT', changes),
+      result = decodeDat(output, 'UISAVE.DAT').result.data.segments[0],
+      expectedPose = Buffer.from(pose);
+    for (const [offset, value] of [
+      [4, 12.5],
+      [8, 0.875],
+      [16, 2.25],
+      [20, -1.25],
+      [48, 10],
+      [52, 20],
+      [56, 30],
+      [112, 100],
+      [164, 200],
+      [216, 300],
+    ])
+      expectedPose.writeFloatLE(value, offset);
+    assert.equal(result.decodedHex, expectedPose.toString('hex'));
+    assert.deepEqual(result.data.cameraPositionOffset, { x: 10, y: 20, z: 30 });
+    assert.equal(result.data.cameraParameterAt12Raw, 123.25);
+    assert.equal(result.data.cameraRotationRadiansRaw, -2.5);
+    assert.equal(result.data.cameraParameterAt24Raw, 24.25);
+    assert.equal(result.data.cameraParameterAt28Raw, 28.25);
+    const expectedFile = Buffer.from(source),
+      fileOffset = 16 + result.decodedContentOffset;
+    expectedPose.forEach((byte, index) => {
+      expectedFile[fileOffset + index] = byte ^ 0x31 ^ (innerMasked ? 0x73 : 0);
+    });
+    assert.deepEqual(output, expectedFile);
+    assert.equal(result.trailerHex, 'aa000000');
+  }
 });

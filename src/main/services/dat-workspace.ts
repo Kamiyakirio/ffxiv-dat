@@ -22,6 +22,7 @@ import {
 import { readableSections } from './dat/readable.ts';
 import { coverageStatus } from './dat/coverage.ts';
 import { createEditPlan } from './dat/editor.ts';
+import { linkBannerEquipment } from './dat/banner-equipment.ts';
 import type {
   GameDirectory,
   CharacterDirectory,
@@ -484,6 +485,10 @@ export class DatWorkspace {
         file.name.toUpperCase() === 'UISAVE.DAT' &&
         Array.isArray(detail.data.segments)
       ) {
+        linkBannerEquipment(
+          detail.data.segments,
+          related('GEARSET.DAT', 'records'),
+        );
         for (const segment of detail.data.segments) {
           if (segment.id !== 41 || !Array.isArray(segment.data.panels))
             continue;

@@ -19,6 +19,7 @@ import JsonTree from './JsonTree';
 export interface BrowserViewState {
   query: string;
   page: number;
+  pageSize?: number;
   showEmpty: boolean;
   scroll: number;
 }
@@ -88,13 +89,19 @@ export default function DecodedContent({
             .toLowerCase()
             .includes(state.query.toLowerCase())),
     );
-  const pages = Math.max(1, Math.ceil(filtered.length / 20)),
-    page = Math.min(state.page, pages - 1);
   const grouped =
     node === root && detail.summary.name.toUpperCase() === 'UISAVE.DAT';
+  // List entries have the same navigation role regardless of how many
+  // fields or child pages their details contain.
+  const compact = !grouped;
+  const pageSize = [20, 60, 120].includes(state.pageSize ?? 0)
+    ? state.pageSize!
+    : 60;
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize)),
+    page = Math.min(state.page, pages - 1);
   const displayed = grouped
     ? filtered
-    : filtered.slice(page * 20, (page + 1) * 20);
+    : filtered.slice(page * pageSize, (page + 1) * pageSize);
   const groups = [
     ...new Set(
       displayed.map((child) => (grouped ? (child.group ?? '其他配置') : '')),
@@ -301,15 +308,41 @@ export default function DecodedContent({
                 </label>
               )}
               <span className="record-count">
+                {!grouped &&
+                  filtered.length > pageSize &&
+                  `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} / `}
                 {filtered.length} {grouped ? '个类别' : '项'}
                 {state.query ? '匹配' : ''}
               </span>
+              {!grouped && children.length > 20 && (
+                <label className="page-size">
+                  每页
+                  <select
+                    aria-label="每页条数"
+                    value={pageSize}
+                    onChange={(event) =>
+                      update({
+                        pageSize: Number(event.currentTarget.value),
+                        page: 0,
+                      })
+                    }
+                  >
+                    {[20, 60, 120].map((size) => (
+                      <option key={size} value={size}>
+                        {size} 项
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <div className={grouped ? 'category-groups' : 'record-groups'}>
               {groups.map((group) => (
                 <section key={group} className="navigation-group">
                   {group && <h3>{group}</h3>}
-                  <div className="navigation-list">
+                  <div
+                    className={`navigation-list${compact ? ' compact-records' : ''}`}
+                  >
                     {displayed
                       .filter(
                         (child) =>
@@ -322,7 +355,9 @@ export default function DecodedContent({
                           className="record-link"
                           onClick={() => open(child)}
                         >
-                          <span className="record-link-text">
+                          <span
+                            className={`record-link-text${compact && (child.description?.length ?? 0) <= 24 ? ' inline-record-text' : ''}`}
+                          >
                             <strong>{child.title}</strong>
                             {!grouped && child.description && (
                               <small>{child.description}</small>

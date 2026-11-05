@@ -47,6 +47,33 @@ function framedText(
     Math.max(0, 65533 - tail.length),
   );
 }
+
+function bannerName(e: EditBuffer, key: string, start: number, hex: string) {
+  const original = Buffer.from(hex, 'hex'),
+    end = original.indexOf(0);
+  if (end < 0 || end > 63) return;
+  const value = decodeUtf8(original.subarray(0, end));
+  if (value === null) return;
+  // CN target 958b78e2... writer 0x1408276ec..736: pad strlen+NUL
+  // to a multiple of four and clear every byte from the NUL to that boundary.
+  // Unlike TOFU strings, old trailing/alignment bytes are not copied forward.
+  e.variableText(
+    key,
+    '动作自定义名称',
+    value,
+    start,
+    4 + original.length,
+    (text) => {
+      const encoded = Buffer.from(text),
+        bytes = Buffer.alloc((encoded.length + 4) & ~3);
+      encoded.copy(bytes);
+      const header = Buffer.from(e.bytes.subarray(start, start + 4));
+      header.writeUInt16LE(bytes.length, 2);
+      return Buffer.concat([header, bytes]);
+    },
+    63,
+  );
+}
 function array(
   editor: EditBuffer,
   key: string,
@@ -74,8 +101,8 @@ function banners(e: EditBuffer, data: Row) {
     7: '表情',
     10: '镜头缩放',
     11: '画面旋转',
-    15: '定向光亮度',
-    17: '环境光亮度',
+    15: '环境光亮度',
+    17: '定向光亮度',
     21: '保存时间',
   };
   const sheets: Record<number, string> = {
@@ -98,19 +125,24 @@ function banners(e: EditBuffer, data: Row) {
       for (const f of rows(r.fields)) {
         const tag = Number(f.tag),
           start = Number(c.offset) + 16 + Number(f.offset),
-          at = start + (tag === 1 || tag === 22 ? 4 : 2),
+          at = start + ([1, 22, 24].includes(tag) ? 4 : 2),
           k = `banner.${ci}.${r.recordIndex}.${tag}`;
         if (labels[tag])
           e.number(
             k,
             labels[tag],
             at,
-            tag === 11 ? 'i16' : tag === 21 ? 'u32' : 'u16',
+            tag === 11
+              ? 'i16'
+              : tag === 21
+                ? 'i32'
+                : [7, 10, 15, 17].includes(tag)
+                  ? 'u8'
+                  : 'u16',
             { reference: sheets[tag] },
           );
-        if (tag === 1)
-          framedText(e, k, '动作自定义名称', start, String(f.valueHex));
-        if (tag === 6) e.number(k, '动作进度', at, 'f32', { min: 0, max: 1 });
+        if (tag === 1) bannerName(e, k, start, String(f.valueHex));
+        if (tag === 6) e.number(k, '动作进度', at, 'f32');
         if ([8, 9, 19, 20].includes(tag)) {
           const count = tag < 10 ? 3 : 2,
             label = {
@@ -131,7 +163,7 @@ function banners(e: EditBuffer, data: Row) {
           for (let i = 0; i < 3; i++)
             e.number(
               `${k}.${i}`,
-              `${tag === 14 ? '定向光' : '环境光'} ${['红', '绿', '蓝'][i]}`,
+              `${tag === 16 ? '定向光' : '环境光'} ${['红', '绿', '蓝'][i]}`,
               at + i,
             );
         if (tag === 18) {
@@ -146,6 +178,8 @@ function banners(e: EditBuffer, data: Row) {
             '部族摘要',
           ].entries())
             e.number(`${k}.${i}`, label, at + i);
+        if (tag === 24 && Buffer.from(String(f.valueHex), 'hex').length === 2)
+          e.bits(k + '.useDefaultPreset', '使用默认肖像预设', at, 1, 2);
       }
     }
 }
@@ -313,8 +347,17 @@ export function uiEditBuffers(decoded: DecodedDat) {
     }
     if (id === 14) array(e, 'watch', '关注成就', 2, 30, 2, 'Achievement');
     if (id === 15) {
-      num('cameraAngle', '镜头角度', 12, 'f32');
-      num('cameraRotation', '镜头旋转', 32, 'f32');
+      num('cameraDistance', '镜头距离', 4, 'f32');
+      num('cameraFieldOfView', '镜头视野', 8, 'f32');
+      num('cameraDirectionHorizontal', '镜头水平方向', 16, 'f32');
+      num('cameraDirectionVertical', '镜头垂直方向', 20, 'f32');
+      for (let j = 0; j < 3; j++)
+        num(
+          `cameraPosition${j}`,
+          `镜头相对位置 ${['X', 'Y', 'Z'][j]}`,
+          48 + j * 4,
+          'f32',
+        );
       for (let i = 0; i < 3; i++) {
         const at = 80 + i * 48,
           k = `light.${i}.`;
@@ -323,7 +366,7 @@ export function uiEditBuffers(decoded: DecodedDat) {
         for (let j = 0; j < 3; j++)
           num(k + `color${j}`, ['红', '绿', '蓝'][j], at + 4 + j * 4, 'f32');
         num(k + 'type', '类型', at + 16, 'u32');
-        for (let j = 0; j < 4; j++)
+        for (let j = 0; j < 3; j++)
           num(
             k + `position${j}`,
             `位置 ${['X', 'Y', 'Z', 'W'][j]}`,

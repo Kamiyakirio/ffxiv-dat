@@ -95,6 +95,7 @@ function populate(editor: EditBuffer, decoded: DecodedDat) {
         [8, '显示头部装备'],
         [16, '显示武器'],
         [32, '开启面罩'],
+        [64, '隐藏维埃拉族耳朵'],
       ] as const)
         editor.bits(key + `flag${bit}`, label, at + 0x37, bit);
       for (const [i, item] of rows(r.items).entries()) {

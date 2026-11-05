@@ -146,13 +146,12 @@ test('TOFU decodes typed objects after odd byte arrays and validates record leng
   assert.equal(decodeTofu(bytes.subarray(0, -1)), null);
 });
 
-test('BANNER decodes half precision vectors and retains unknown fields', () => {
+test('BANNER decodes vectors and length-prefixed flags while retaining unknown bits', () => {
   const content = Buffer.concat([
     words(0, 9, 2, 7, 8, 0x3c00, 0xbc00, 0),
     words(22, 4),
     Buffer.from([4, 1, 100, 7]),
-    words(24),
-    Buffer.from([3, 0, 0, 0]),
+    words(24, 2, 3),
   ]);
   const bytes = chunk(0, content);
   const result = decodeBanners(bytes);
@@ -162,7 +161,11 @@ test('BANNER decodes half precision vectors and retains unknown fields', () => {
   assert.equal(banner.bannerBg, 7);
   assert.deepEqual(banner.cameraPosition, [1, -1, 0]);
   assert.equal(banner.customizeCandidate.tribe, 7);
-  assert.equal(banner.unknownTag24, 3);
+  assert.equal(banner.flagsRaw, 3);
+  assert.equal(banner.useDefaultPreset, true);
+  assert.equal(banner.unknownFlags, 2);
+  assert.equal(banner.bannerIndex, 9);
+  assert.equal(banner.bannerId, 0);
   assert.equal(decodeBanners(bytes.subarray(0, -1)), null);
 });
 

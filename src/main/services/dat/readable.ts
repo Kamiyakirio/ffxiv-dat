@@ -2,7 +2,12 @@ import type {
   DecodedFileDetail,
   ReadableSection,
 } from '../../../shared/types.ts';
-import { gameName, itemName } from './game-data.ts';
+import {
+  gameName,
+  itemName,
+  hotbarTypes,
+  describeHotbarCommand,
+} from './game-data.ts';
 import { segmentNames } from '../../../shared/dat-labels.ts';
 
 type Row = Record<string, unknown>;
@@ -69,7 +74,8 @@ const labels: Record<string, string> = {
   isFavorite: '已收藏',
   present: '有记录',
   settingsCandidate: '麻将设置（布局对应待验证）',
-  statisticsCandidate: '麻将统计（布局对应待验证）',
+  settings: '设置',
+  statisticsCandidate: '麻将历史数值（业务含义待核对）',
   tileSet: '牌面样式编号（候选）',
   hideHints: '隐藏提示（候选）',
   hideDangerousTileMarker: '隐藏危险牌标记（候选）',
@@ -84,6 +90,11 @@ const labels: Record<string, string> = {
   emjCostumeId: '服装编号（候选）',
   timestampCandidate: '时间整数（用途待核对）',
   historyValues: '历史统计整数（项目含义待核对）',
+  historyEntries: '历史条目（数值含义待核对）',
+  valueRaw: '保存的整数值',
+  timeRaw: '保存的时钟值（用途待核对）',
+  seenVoiceNpcIds: '已查看的麻将语音角色编号',
+  seenCostumeIds: '已查看的麻将服装条目编号',
   retainerCount: '雇员数量',
   objectNames: '工坊产品',
   customize: '外观摘要',
@@ -115,7 +126,7 @@ const labels: Record<string, string> = {
   worldId: '服务器',
   worldIdEncoded: '服务器编号',
   recordIndex: '记录序号',
-  recordKeyRaw: '记录键（含义未确认）',
+  recordKeyRaw: '物理记录索引',
   comment: '备注',
   title: '标题',
   recipientName: '收件人',
@@ -185,7 +196,8 @@ const labels: Record<string, string> = {
   eyeDirection: '视线方向',
   lastUpdatedUnix: '更新时间',
   unixTimestamp: '时间',
-  completionUnixCandidate: '任务记录时间（用途待核对）',
+  completionUnix: '任务完成时间',
+  completionUnixCandidate: '任务完成时间（旧字段）',
   automaticallyDisplayRecordRaw: '自动显示笔记状态值',
   numSubEntriesSeen: '子条目进度保存值',
   isUnseenRaw: '未读状态值',
@@ -228,7 +240,9 @@ const labels: Record<string, string> = {
   groupLabelsCandidate: '社交分组（候选）',
   contactRecordsCandidate: '社交联系人（候选）',
   contacts: '联系人',
-  tasks: '雇员任务（候选）',
+  tasks: '雇员任务',
+  actionChangeEnabled: '启用技能变换',
+  antiMisactivationEnabled: '防止复唱误发动',
   retainersCandidate: '雇员备注（候选）',
   presets: '预设',
   markers: '场地标点',
@@ -259,6 +273,14 @@ const labels: Record<string, string> = {
   patchMarkVersions: '版本标记',
   patchMarkStates: '版本状态',
   namedFlagsCandidate: '界面状态（候选）',
+  namedFlags: '界面状态',
+  lastSeenMentorVersion: '已查看的指导者版本',
+  hideMentorRenewDialogue: '隐藏指导者续期提示',
+  defaultCurrencyRotationIndex: '默认货币轮换索引',
+  currencySettingIds0To3: '货币设置编号 0–3',
+  currencySettingIdForRotation5: '第5个货币轮换设置编号',
+  actionsAndTraitsCompactView: '技能与特性紧凑视图',
+  hidePortraitUpdatePreview: '隐藏肖像更新预览',
   seenNotes: '笔记阅读记录',
   termFilters: '屏蔽词',
   setNames: '预设名称',
@@ -357,7 +379,8 @@ function valueText(key: string, value: unknown): string | number | null {
   if (
     key === 'unixTimestamp' ||
     key === 'lastUpdatedUnix' ||
-    key === 'completionUnixCandidate'
+    key === 'completionUnixCandidate' ||
+    key === 'completionUnix'
   )
     return timestamp(value);
   if (typeof value === 'boolean') return value ? '是' : '否';
@@ -513,6 +536,11 @@ function structuredSections(
   title: string,
 ): ReadableSection[] {
   const sections: ReadableSection[] = [];
+  const confirmedMahjongSettings = /^11-chunk-\d+-data-settings$/.test(prefix);
+  const labelFor = (key: string) =>
+    confirmedMahjongSettings
+      ? labels[key]?.replace(/（候选）$/, '')
+      : labels[key];
   const alternatives: Record<string, string> = {
     achievementWatchlist: 'achievements',
     unseenFishIds: 'fishEntries',
@@ -522,6 +550,14 @@ function structuredSections(
     isUnseenRaw: 'isUnseen',
     termFiltersEnabledRaw: 'termFiltersEnabled',
     channelFlags: 'channels',
+    flag0: 'actionChangeEnabled',
+    flag1: 'antiMisactivationEnabled',
+    completionUnixCandidate: 'completionUnix',
+    settingsCandidate: 'settings',
+    historyValues: 'historyEntries',
+    unknownValue: 'historyEntries',
+    timestampCandidate: 'historyEntries',
+    namedFlagsCandidate: 'namedFlags',
   };
   const visibleKey = (key: string) =>
     !alternatives[key] || data[alternatives[key]] === undefined;
@@ -543,7 +579,7 @@ function structuredSections(
           ['value', '内容'],
         ],
         scalarKeys.map((key) => ({
-          field: labels[key],
+          field: labelFor(key),
           value: valueText(key, data[key]),
         })),
       ),
@@ -623,6 +659,9 @@ function structuredSections(
           isFavoriteRaw: 'isFavorite',
           isUnseenRaw: 'isUnseen',
           channelFlags: 'channels',
+          flag0: 'actionChangeEnabled',
+          flag1: 'antiMisactivationEnabled',
+          completionUnixCandidate: 'completionUnix',
           objectIds: 'objectNames',
           bannerBg: 'backgroundName',
           bannerFrame: 'frameName',
@@ -693,7 +732,7 @@ function structuredSections(
         ...structuredSections(
           object(value),
           `${prefix}-${key}`,
-          `${title} · ${labels[key] ?? '内容'}`,
+          `${title} · ${key === 'settings' && prefix.startsWith('11-') ? '麻将设置' : (labels[key] ?? '内容')}`,
         ),
       );
     }
@@ -887,14 +926,315 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
         value.tasks = rows(value.tasks).filter(
           (row) => row.retainerId && row.retainerId !== '0',
         );
-      if (segment.id === 22)
-        value.retainersCandidate = rows(value.retainersCandidate).filter(
-          (row) => row.id !== '0' || row.comment,
-        );
+      if (segment.id === 30 && Array.isArray(value.actions))
+        value.actions = rows(value.actions).map((action) => ({
+          ...action,
+          actionChangeEnabled:
+            action.actionChangeEnabled === null
+              ? `未定义保存值（${action.flag0}）`
+              : action.actionChangeEnabled,
+          antiMisactivationEnabled:
+            action.antiMisactivationEnabled === null
+              ? `未定义保存值（${action.flag1}）`
+              : action.antiMisactivationEnabled,
+        }));
 
       const id = String(segment.id);
       const name = segmentNames[String(segment.name)] ?? String(segment.name);
       let sections: ReadableSection[];
+      if (segment.id === 4 && Array.isArray(value.blocks)) {
+        const make = (section: ReadableSection) => ({
+          ...section,
+          sourceId: id,
+        });
+        return [
+          make(
+            table(
+              'social-labels',
+              '社交分组名称',
+              [
+                ['index', '保存槽位'],
+                ['name', '名称'],
+              ],
+              rows(value.groupLabels)
+                .filter((entry) => entry.name)
+                .map((entry) => ({ ...entry, index: number(entry.index) + 1 })),
+              '名称及存储位置已确认；分组的具体业务分类仍待核对。',
+            ),
+          ),
+          make(
+            table(
+              'social-contacts',
+              '联系人缓存',
+              [
+                ['index', '保存槽位'],
+                ['name', '名称'],
+                ['identityIdRaw', '身份保存值'],
+                ['worldIdRaw', '服务器保存值'],
+              ],
+              rows(value.contactRecords)
+                .filter(
+                  (entry) =>
+                    entry.name ||
+                    entry.identityIdRaw !== '0' ||
+                    number(entry.worldIdRaw),
+                )
+                .map((entry) => ({ ...entry, index: number(entry.index) + 1 })),
+              '身份值的ContentId绑定尚未证实，保持原值而不作角色身份匹配。',
+            ),
+          ),
+          make(
+            table(
+              'social-list',
+              '分列社交记录（列表分类待核对）',
+              [
+                ['index', '记录'],
+                ['name', '名称'],
+                ['comment', '备注'],
+                ['identityIdRaw', '身份保存值'],
+                ['worldIdRaw', '服务器保存值'],
+                ['recordIdRaw', '记录键'],
+                ['flagRaw', '保存标志'],
+              ],
+              rows(object(value.socialList).entries).map((entry) => ({
+                ...entry,
+                index: number(entry.index) + 1,
+              })),
+              '名称、备注、数组边界与字段宽度已确认；列表类别、身份类型及标志用途仍保留待核对。',
+            ),
+          ),
+          make(
+            table(
+              'mute-list',
+              '屏蔽记录（MuteList）',
+              [
+                ['index', '记录'],
+                ['name', '名称'],
+                ['comment', '备注'],
+                ['accountId', '账号 ID'],
+                ['worldId', '服务器'],
+              ],
+              rows(object(value.muteList).entries).map((entry) => ({
+                ...entry,
+                index: number(entry.index) + 1,
+              })),
+            ),
+          ),
+        ];
+      }
+      if (
+        segment.id === 22 &&
+        (Array.isArray(value.retainers) ||
+          Array.isArray(value.retainersCandidate))
+      ) {
+        const savedTasks = (retainer: Row) =>
+          rows(retainer.savedTaskEntries).filter(
+            (entry) =>
+              number(entry.taskIdRaw) !== 0 || number(entry.flagRaw) !== 0,
+          );
+        const retainers = rows(
+          value.retainers ?? value.retainersCandidate,
+        ).filter(
+          (retainer) =>
+            (retainer.id && retainer.id !== '0') ||
+            retainer.comment ||
+            savedTasks(retainer).length,
+        );
+        const make = (section: ReadableSection) => ({
+          ...section,
+          sourceId: id,
+        });
+        if (!retainers.length)
+          return [
+            make(
+              table(
+                'retainer-comments',
+                '雇员备注与任务历史',
+                [
+                  ['retainerId', '雇员 ID'],
+                  ['comment', '备注'],
+                ],
+                [],
+                '没有保存的雇员备注或任务历史。',
+              ),
+            ),
+          ];
+        return retainers.flatMap((retainer) => {
+          const index = number(retainer.index);
+          return [
+            make(
+              table(
+                `retainer-${index}-comment`,
+                `雇员 ${index + 1} · 备注`,
+                [
+                  ['retainerId', '雇员 ID'],
+                  ['comment', '备注'],
+                ],
+                [
+                  {
+                    retainerId: retainer.id,
+                    comment: retainer.comment || '未填写',
+                  },
+                ],
+              ),
+            ),
+            make(
+              table(
+                `retainer-${index}-task-history`,
+                `雇员 ${index + 1} · 任务历史`,
+                [
+                  ['slot', '保存顺序'],
+                  ['taskIdRaw', '任务编号（原值）'],
+                  ['isPinned', '固定到历史'],
+                ],
+                savedTasks(retainer).map((entry) => ({
+                  slot: number(entry.slot) + 1,
+                  taskIdRaw: entry.taskIdRaw,
+                  isPinned:
+                    entry.isPinned === null
+                      ? `未定义保存值（${entry.flagRaw}）`
+                      : entry.isPinned,
+                })),
+                '任务编号保留存档原值，任务表名称关联仍待核对；固定状态表示固定到历史列表。',
+              ),
+            ),
+          ];
+        });
+      }
+      if (segment.id === 41 && Array.isArray(value.panels)) {
+        const make = (section: ReadableSection) => ({
+          ...section,
+          sourceId: id,
+        });
+        const command = (type: unknown, commandId: unknown) => {
+          const typeId = number(type);
+          const storedId = number(commandId);
+          const description = describeHotbarCommand(
+            hotbarTypes[typeId] ?? String(typeId),
+            storedId,
+          );
+          return {
+            typeLabel: description.commandTypeLabel,
+            name:
+              description.commandName ??
+              `未收录名称（类型 ${typeId} / 编号 ${storedId}）`,
+          };
+        };
+        const panels = rows(value.panels);
+        return [
+          make(
+            table(
+              'quick-panel-settings',
+              '快捷面板 · 设置',
+              [
+                ['field', '设置'],
+                ['value', '内容'],
+              ],
+              [
+                {
+                  field: '执行后关闭面板',
+                  value: value.closePanelUponExecutingActions,
+                },
+                {
+                  field: '在鼠标位置打开面板',
+                  value: value.openPanelAtMouseCursorPosition,
+                },
+                {
+                  field: '禁止拖动面板内图标',
+                  value: value.disableDraggingWithinCommandPanel,
+                },
+                { field: '已阅读首次帮助', value: value.firstTimeHelpSeen },
+                { field: '色调', value: value.tint },
+                {
+                  field: '开启时显示',
+                  value: value.openLastUsedPanel
+                    ? '最近使用的分页'
+                    : `面板 ${number(value.panelOpenIndex) + 1}`,
+                },
+              ],
+            ),
+          ),
+          make(
+            table(
+              'quick-panel-icons',
+              '快捷面板 · 分页图标',
+              [
+                ['panel', '分页'],
+                ['typeLabel', '图标来源类型'],
+                ['name', '图标来源'],
+                ['iconCommandType', '来源类型编号'],
+                ['iconCommandId', '来源内容编号'],
+                ['defaultIconId', '默认图标编号'],
+              ],
+              panels.map((panel) => {
+                const index = number(panel.index);
+                const useDefault = panel.usesDefaultIcon === true;
+                return {
+                  panel: index + 1,
+                  ...(useDefault
+                    ? {
+                        typeLabel: '默认图标',
+                        name: `快捷面板 ${index + 1} 默认图标`,
+                      }
+                    : command(panel.iconCommandType, panel.iconCommandId)),
+                  iconCommandType: panel.iconCommandType,
+                  iconCommandId: panel.iconCommandId,
+                  defaultIconId: useDefault ? panel.defaultIconId : '不适用',
+                };
+              }),
+              '自定义图标按命令类型与编号关联；默认图标使用客户端的分页图标编号。',
+            ),
+          ),
+          ...panels.map((panel) =>
+            make(
+              table(
+                `quick-panel-${number(panel.index)}-slots`,
+                `快捷面板 ${number(panel.index) + 1} · 已保存的内容`,
+                [
+                  ['slot', '槽位'],
+                  ['typeLabel', '内容类型'],
+                  ['name', '内容'],
+                  ['commandType', '类型编号'],
+                  ['commandId', '内容编号'],
+                ],
+                rows(panel.slots)
+                  .filter(
+                    (entry) =>
+                      number(entry.commandType) !== 0 ||
+                      number(entry.commandId) !== 0,
+                  )
+                  .map((entry) => ({
+                    ...entry,
+                    ...command(entry.commandType, entry.commandId),
+                    slot: number(entry.slot) + 1,
+                  })),
+              ),
+            ),
+          ),
+        ];
+      }
+      if (segment.id === 1 && Array.isArray(value.tasks))
+        return [
+          {
+            ...table(
+              'retainer-tasks',
+              '雇员任务',
+              [
+                ['index', '任务槽位'],
+                ['retainerId', '雇员 ID'],
+                ['completionUnix', '完成时间'],
+              ],
+              rows(value.tasks).map((task) => ({
+                ...task,
+                index: number(task.index) + 1,
+                completionUnix:
+                  task.completionUnix ?? task.completionUnixCandidate,
+              })),
+              rows(value.tasks).length ? undefined : '没有保存的雇员任务记录。',
+            ),
+            sourceId: id,
+          },
+        ];
       if (segment.id === 34 && Array.isArray(value.wishlist))
         return [
           {
@@ -932,23 +1272,48 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
           ),
           sourceId: id,
         }));
-      if (segment.id === 6 && Array.isArray(value.tiers))
-        return rows(value.tiers).map((tier, index) => ({
+      if (segment.id === 6 && Array.isArray(value.tiers)) {
+        const menuSections = rows(value.tiers).map((tier, index) => ({
           ...table(
             `item-menu-tier-${index}`,
-            `物品菜单 · 优先级 ${index + 1}`,
+            `物品菜单 · 第 ${index + 1} 级`,
             [
               ['index', '顺序'],
+              ['name', '菜单项'],
+              ['allowedInMenu', '允许在菜单中显示'],
               ['menuEntryId', '菜单项编号'],
+              ['addonRowId', '菜单文字编号'],
+              ['helpAddonRowId', '说明文字编号'],
             ],
             rows(tier.entries).map((entry) => ({
               ...entry,
               index: number(entry.index) + 1,
             })),
-            '菜单项编号与具体菜单文字的对应尚未确认。',
+            '位图按菜单编号保存显示许可。实际可见项还受物品与场景条件限制；名称按固定公开Addon表关联。',
           ),
           sourceId: id,
         }));
+        if (value.usesDefaultMenu && Array.isArray(value.defaultMenuEntries))
+          menuSections.push({
+            ...table(
+              'item-menu-default',
+              '客户端默认菜单（静态推导）',
+              [
+                ['index', '默认顺序'],
+                ['name', '菜单项'],
+                ['allowedInMenu', '默认允许显示'],
+                ['menuEntryId', '菜单项编号'],
+              ],
+              rows(value.defaultMenuEntries).map((entry) => ({
+                ...entry,
+                index: number(entry.index) + 1,
+              })),
+              '第一级没有自定义排序时，客户端使用目标EXE内58项默认顺序和显示许可；不是存档新增的58条配置。',
+            ),
+            sourceId: id,
+          });
+        return menuSections;
+      }
       if (segment.id === 7 && Array.isArray(value.stateEntries))
         return [
           {
@@ -959,17 +1324,32 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
                 ['classJobName', '职业'],
                 ['selectionRaw', '保存值'],
                 ['selectedIndex', '选择项索引'],
+                ['selectedActionNameCandidate', '职能技能（公开表关联）'],
               ],
               rows(value.stateEntries).map((entry) => ({
                 ...entry,
                 index: number(entry.index) + 1,
+                selectedActionNameCandidate:
+                  entry.selectedIndex === null
+                    ? '未设置'
+                    : (entry.selectedActionNameCandidate ??
+                      `公开表未收录索引 ${entry.selectedIndex}`),
               })),
-              '零表示未设置；选择项索引从零开始。选项与界面的对应尚未确认，未映射职业槽保留原值。',
+              '零表示未设置；选择项索引从零开始。职能技能名称按固定公开表候选关联，尚未核验目标客户端同版本资源；未映射职业槽保留原值。',
             ),
             sourceId: id,
           },
         ];
-      if (segment.id === 21 && Array.isArray(value.groups))
+      if (segment.id === 21 && Array.isArray(value.groups)) {
+        const meaningful = (record: Row) =>
+          number(record.enabledRaw) !== 0 ||
+          (record.catalogEntryId !== null &&
+            record.catalogEntryId !== undefined &&
+            number(record.catalogEntryId) !== 0xffffffff) ||
+          number(record.iconId) !== 0 ||
+          number(record.stampType) === 4;
+        const allRecords = rows(value.records);
+        const groups = rows(value.groups);
         return [
           {
             ...table(
@@ -978,21 +1358,113 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
               [
                 ['index', '组'],
                 ['name', '名称'],
+                ['hasSavedData', '已保存'],
+                ['recordCount', '有内容的贴纸记录'],
+                ['timeFormatNameCandidate', '时间模板（候选）'],
+                ['timeFormatAddonId', '时间模板文字编号'],
+                ['savedSettingRaw', '保存设置值（用途待核对）'],
               ],
-              rows(value.groups).map((group) => ({
-                index: number(group.index) + 1,
-                name: group.name,
+              groups.map((group, index) => ({
+                ...group,
+                index: index + 1,
+                name: group.name || `配置组 ${index + 1}`,
+                hasSavedData:
+                  group.hasSavedData ?? number(group.savedStateRaw) !== 0,
+                recordCount: allRecords.filter(
+                  (record) =>
+                    number(record.groupIndex) === number(group.index) &&
+                    meaningful(record),
+                ).length,
+                timeFormatNameCandidate:
+                  group.clockFormatCandidate === '12-hour'
+                    ? '12 小时制'
+                    : group.clockFormatCandidate === '24-hour'
+                      ? '24 小时制'
+                      : '未关联',
               })),
+              '时间模板名称由公共中文表关联；目标客户端已确认保存相应 Addon 行号，同版本资源文字尚未复核。',
             ),
             sourceId: id,
           },
-          ...rows(value.groups).flatMap((group, index) => {
-            const title = group.name || `配置组 ${index + 1}`;
+          ...groups.flatMap((group, index) => {
+            const title = String(group.name || `配置组 ${index + 1}`);
+            const records = allRecords.filter(
+              (record) =>
+                number(record.groupIndex) === number(group.index) &&
+                meaningful(record),
+            );
             return [
               {
                 ...table(
-                  `stamp-text-${index}`,
-                  `${title} · 贴纸文字`,
+                  `stamp-groups-${index}-records`,
+                  `${title} · 贴纸`,
+                  [
+                    ['name', '贴纸'],
+                    ['slot', '组内槽位'],
+                    ['index', '全局物理索引'],
+                    ['stampTypeName', '类型'],
+                    ['stampType', '类型保存值'],
+                    ['enabled', '启用'],
+                    ['catalogEntryId', '贴纸目录编号'],
+                    ['iconId', '图标编号'],
+                    ['drawPriority', '绘制优先级'],
+                    ['alpha', '不透明度（0–255）'],
+                    ['scale', '缩放倍数'],
+                    ['positionNormalized', '归一化位置 X / Y'],
+                    ['rotationDegrees', '旋转角度（度）'],
+                    ['flipHorizontally', '水平翻转'],
+                    ['flipVertically', '垂直翻转'],
+                    ['fontSize', '字号'],
+                    ['textColorPresetId', '文字颜色预设编号'],
+                    ['textAlignmentName', '文字水平对齐'],
+                    ['savedText', '保存的文字'],
+                  ],
+                  records.map((record) => {
+                    const isText = record.stampType === 4,
+                      slot = number(record.slot);
+                    return {
+                      ...record,
+                      slot: slot + 1,
+                      name: `贴纸 ${slot + 1} · ${record.stampTypeName || '未定义类型'}`,
+                      stampTypeName:
+                        record.stampTypeName ??
+                        `未定义类型 ${record.stampType}`,
+                      fontSize: isText ? record.fontSize : '不适用',
+                      textColorPresetId: isText
+                        ? record.textColorPresetId
+                        : '不适用',
+                      textAlignmentName: isText
+                        ? ((
+                            {
+                              left: '靠左',
+                              center: '居中',
+                              right: '靠右',
+                            } as Record<string, string>
+                          )[String(record.textAlignment)] ??
+                          `未定义保存值 ${record.textAlignmentRaw}`)
+                        : '不适用',
+                      flipHorizontally: isText
+                        ? '不适用'
+                        : record.flipHorizontally,
+                      flipVertically: isText ? '不适用' : record.flipVertically,
+                      savedText:
+                        isText && slot >= 200 && slot < 210
+                          ? (rows(group.texts).find(
+                              (text) => number(text.slot) === slot - 200,
+                            )?.text ?? null)
+                          : null,
+                    };
+                  }),
+                  records.length
+                    ? '缩放、坐标、旋转、绘制优先级、不透明度、镜像和文字格式已由客户端消费指令确认；图片子类型名称仍有未核对项。'
+                    : '没有保存有内容的贴纸记录；默认分配的210个槽位保留在技术数据中。',
+                ),
+                sourceId: id,
+              },
+              {
+                ...table(
+                  `stamp-groups-${index}-texts`,
+                  `${title} · 保存文字`,
                   [
                     ['slot', '文字槽位'],
                     ['text', '文字'],
@@ -1008,45 +1480,287 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
               },
               {
                 ...table(
-                  `stamp-order-${index}`,
+                  `stamp-groups-${index}-order`,
                   `${title} · 贴纸顺序`,
                   [
                     ['index', '显示顺序'],
-                    ['recordIndex', '记录槽位'],
+                    ['storedIndex', '保存的记录索引（原值）'],
                   ],
-                  list(group.order).flatMap((recordIndex, orderIndex) =>
-                    number(recordIndex) === 0xffffffff
+                  list(group.order).flatMap((storedIndex, orderIndex) =>
+                    number(storedIndex) === 0xffffffff
                       ? []
-                      : [{ index: orderIndex + 1, recordIndex }],
+                      : [{ index: orderIndex + 1, storedIndex }],
                   ),
-                  '保存的顺序已经读取；记录内各数值的业务含义尚未确认。',
+                  '顺序向量已读取；其记录索引采用组内还是全局编号仍未验证，不据此建立记录关联。',
                 ),
                 sourceId: id,
               },
             ];
           }),
         ];
-      if (segment.id === 13 && Array.isArray(value.groups))
-        return rows(value.groups).map((group, index) => ({
-          ...table(
-            `cwls-group-${index}`,
-            `跨服通讯贝 · 分组 ${index + 1}`,
+      }
+      if (segment.id === 12 && Array.isArray(value.activeSets)) {
+        const sets = rows(value.activeSets);
+        const actionRows = (entries: unknown) =>
+          rows(entries)
+            .filter((entry) => number(entry.storedId) !== 0)
+            .map((entry) => ({
+              slot: number(entry.index) + 1,
+              name:
+                entry.name ??
+                (entry.actionId === null || entry.actionId === undefined
+                  ? `未收录青魔技能 ${entry.storedId}`
+                  : named('Action', entry.actionId)),
+              storedId: entry.storedId,
+              actionIdRaw: entry.actionId,
+            }));
+        const hotbarRows = (entries: unknown) =>
+          rows(entries)
+            .filter((entry) => entry.kind !== 'ClearBlueMageOrMacro')
+            .map((entry) => ({
+              slot: number(entry.slotIndex) + 1,
+              name:
+                entry.kind === 'Macro'
+                  ? `${entry.macroBankName}宏 ${number(entry.macroIndex) + 1}`
+                  : entry.kind === 'InvalidMacro'
+                    ? `无效宏编码 ${entry.storedValue}`
+                    : entry.kind === 'PreserveExisting'
+                      ? '保留原快捷栏内容'
+                      : (entry.name ??
+                        (entry.actionId === null || entry.actionId === undefined
+                          ? `未收录青魔技能 ${entry.storedId}`
+                          : named('Action', entry.actionId))),
+              kind:
+                entry.kind === 'Macro'
+                  ? '宏'
+                  : entry.kind === 'InvalidMacro'
+                    ? '无效宏'
+                    : entry.kind === 'PreserveExisting'
+                      ? '保留'
+                      : '青魔技能',
+              storedValue: entry.storedValue,
+              actionIdRaw: entry.actionId,
+            }));
+        const referenceNote =
+          '技能编号通过固定版本公开 AozAction 表关联到 Action；原生保存字节与 Action ID 分列。空槽省略，原槽位编号保留。';
+        const result = [
+          table(
+            'aoz-sets',
+            '青魔法预设',
             [
-              ['slot', '槽位'],
-              ['linkshellId', '通讯贝 ID'],
-              ['selected', '当前选择'],
+              ['slot', '预设'],
+              ['name', '名称'],
+              ['actionCount', '技能数'],
+              ['hotbarCount', '保存的快捷栏内容数'],
             ],
-            rows(group.slots)
-              .filter((entry) => entry.linkshellId !== '0')
-              .map((entry) => ({
-                ...entry,
-                slot: number(entry.slot) + 1,
-                selected: entry.linkshellId === group.selectedLinkshellId,
-              })),
-            '通讯贝名称未保存在这组槽位数据中。',
+            sets.map((set, index) => ({
+              slot: index + 1,
+              name: set.name || `预设 ${index + 1}`,
+              actionCount: actionRows(set.activeActions).length,
+              hotbarCount: [
+                ...rows(set.standardHotbars),
+                ...rows(set.crossHotbars),
+              ].reduce((count, bar) => count + hotbarRows(bar.slots).length, 0),
+            })),
           ),
-          sourceId: id,
-        }));
+          ...sets.flatMap((set, index) => {
+            const title = set.name || `预设 ${index + 1}`;
+            return [
+              table(
+                `aoz-sets-${index}-actions`,
+                `${title} · 技能`,
+                [
+                  ['slot', '槽位'],
+                  ['name', '技能'],
+                  ['storedId', '青魔技能保存编号'],
+                  ['actionIdRaw', 'Action ID'],
+                ],
+                actionRows(set.activeActions),
+                referenceNote,
+              ),
+              ...['standardHotbars', 'crossHotbars'].flatMap((key) => {
+                const bars = rows(set[key]),
+                  barTitle =
+                    key === 'standardHotbars' ? '普通快捷栏' : '十字快捷栏',
+                  prefix = `aoz-sets-${index}-${key}`;
+                return [
+                  table(
+                    prefix,
+                    `${title} · ${barTitle}`,
+                    [
+                      ['slot', '快捷栏'],
+                      ['contentCount', '保存内容数'],
+                    ],
+                    bars.map((bar, barIndex) => ({
+                      slot: barIndex + 1,
+                      contentCount: hotbarRows(bar.slots).length,
+                    })),
+                  ),
+                  ...bars.map((bar, barIndex) =>
+                    table(
+                      `${prefix}-${barIndex}-slots`,
+                      `${title} · ${barTitle} ${barIndex + 1} · 内容`,
+                      [
+                        ['slot', '槽位'],
+                        ['kind', '类型'],
+                        ['name', '内容'],
+                        ['storedValue', '保存值'],
+                        ['actionIdRaw', 'Action ID'],
+                      ],
+                      hotbarRows(bar.slots),
+                      '宏编号按个人/公用宏列表显示；是否已创建需结合宏文件。未列出的0值槽位仅清除原青魔技能或宏，不覆盖其它类型；255表示保留原内容。',
+                    ),
+                  ),
+                ];
+              }),
+            ];
+          }),
+          table(
+            'aoz-recent',
+            '最近使用的青魔技能',
+            [
+              ['slot', '保存位置'],
+              ['name', '技能'],
+              ['storedId', '青魔技能保存编号'],
+              ['actionIdRaw', 'Action ID'],
+            ],
+            actionRows(value.recentActions),
+            referenceNote,
+          ),
+        ];
+        return result.map((section) => ({ ...section, sourceId: id }));
+      }
+      if (segment.id === 15 && value.cameraPositionOffset !== undefined) {
+        const xyz = (v: unknown) => {
+          const vector = object(v);
+          return ['x', 'y', 'z']
+            .map(
+              (key) =>
+                `${key.toUpperCase()} ${valueText(key, vector[key]) ?? '未记录'}`,
+            )
+            .join(' · ');
+        };
+        return [
+          {
+            ...table(
+              'group-pose-camera',
+              '集体动作 · 镜头',
+              [
+                ['field', '设置'],
+                ['value', '内容'],
+              ],
+              [
+                { field: '镜头缩放模式保存值', value: value.cameraZoomMode },
+                { field: '镜头控制模式保存值', value: value.cameraControlMode },
+                { field: '镜头距离', value: value.cameraDistance },
+                { field: '镜头视野', value: value.cameraFieldOfView },
+                {
+                  field: '水平方向（弧度）',
+                  value: value.cameraDirectionHorizontal,
+                },
+                {
+                  field: '垂直方向（弧度）',
+                  value: value.cameraDirectionVertical,
+                },
+                {
+                  field: '相对镜头位置',
+                  value: xyz(value.cameraPositionOffset),
+                },
+                {
+                  field: '镜头位置坐标系',
+                  value:
+                    value.cameraPositionCoordinateSpace ===
+                    'target-oriented-relative'
+                      ? '相对目标位置与朝向'
+                      : '相对目标位置',
+                },
+              ],
+              '镜头位置仅含XYZ，为相对目标的偏移。尚未确认业务含义的内部镜头参数与向量对齐字节保留在技术数据中。',
+            ),
+            sourceId: id,
+          },
+          {
+            ...table(
+              'group-pose-lights',
+              '集体动作 · 灯光',
+              [
+                ['slot', '灯光'],
+                ['enabled', '启用'],
+                ['red', '红'],
+                ['green', '绿'],
+                ['blue', '蓝'],
+                ['type', '类型保存值'],
+                ['positionText', '位置 XYZ'],
+              ],
+              rows(value.lights).map((light, index) => ({
+                ...light,
+                slot: index + 1,
+                positionText: xyz(light.position),
+              })),
+              '灯光类型数值的界面名称仍待核对。',
+            ),
+            sourceId: id,
+          },
+          {
+            ...table(
+              'group-pose-lighting-settings',
+              '集体动作 · 照明设置',
+              [
+                ['field', '设置'],
+                ['value', '内容'],
+              ],
+              [
+                {
+                  field: '灯光随角色朝向',
+                  value: value.isCharacterOrientedLight,
+                },
+                {
+                  field: '启用手动亮度',
+                  value: value.isManualBrightnessEnabled,
+                },
+                { field: '手动亮度', value: value.manualBrightness },
+                { field: '角色照明', value: value.characterLighting },
+              ],
+            ),
+            sourceId: id,
+          },
+        ];
+      }
+      if (segment.id === 13 && Array.isArray(value.groups))
+        return [
+          {
+            ...table(
+              'cwls-settings',
+              '跨服通讯贝 · 列表设置',
+              [
+                ['field', '设置'],
+                ['value', '内容'],
+              ],
+              [{ field: '在线成员优先', value: value.onlineMembersFirst }],
+            ),
+            sourceId: id,
+          },
+          ...rows(value.groups).map((group, index) => ({
+            ...table(
+              `cwls-group-${index}`,
+              `跨服通讯贝 · ${group.dataCenterNameForTargetClient || `分组 ${index + 1}`}`,
+              [
+                ['slot', '槽位'],
+                ['linkshellId', '通讯贝 ID'],
+                ['selected', '当前选择'],
+              ],
+              rows(group.slots)
+                .filter((entry) => entry.linkshellId !== '0')
+                .map((entry) => ({
+                  ...entry,
+                  slot: number(entry.slot) + 1,
+                  selected: entry.linkshellId === group.selectedLinkshellId,
+                })),
+              `${group.dataCenterNameForTargetClient ? `目标中国客户端对应${group.dataCenterNameForTargetClient}（数据中心 ${group.dataCenterIdForTargetClient}）；` : ''}通讯贝名称未保存在这组槽位数据中。`,
+            ),
+            sourceId: id,
+          })),
+        ];
       if (segment.id === 42 && Array.isArray(value.groups))
         return rows(value.groups).map((group, index) => ({
           ...table(
@@ -1086,7 +1800,9 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
             gameName('Tribe', number(object(row.customize).tribe)) ??
             object(row.customize).tribe,
           checksumValue:
-            '0x' + number(row.checksum).toString(16).padStart(8, '0'),
+            row.checksum === undefined || row.checksum === null
+              ? null
+              : '0x' + number(row.checksum).toString(16).padStart(8, '0'),
         }));
         const make = (
           id: string,
@@ -1136,12 +1852,16 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
             '存储键与关联值',
             [
               ['portrait', '记录'],
-              ['recordKeyRaw', '存储记录键'],
+              ['bannerIndex', '物理肖像索引'],
+              ['bannerId', '运行时肖像 ID'],
+              ['useDefaultPreset', '使用默认预设'],
+              ['flagsRaw', '肖像旗标保存值'],
               ['checksumValue', '装备关联值'],
-              ['unknownTag24', '标签 24 保存值（用途未确认）'],
+              ['equipmentChecksumStatus', '装备快照匹配状态'],
+              ['matchedGearsetNames', '匹配的本地套装'],
               ['lastUpdatedUnix', '更新时间'],
             ],
-            '装备关联值已读取；与旧装备快照的匹配和校验算法仍未验证。',
+            '装备关联值的 CRC 算法已还原；只有取得一致的装备、染色、眼镜和可见性输入时才能核验。未找到一致本地快照不等于文件损坏或校验失败。',
           ),
         ];
       }
@@ -1247,6 +1967,29 @@ export function readableSections(detail: DecodedFileDetail): ReadableSection[] {
                     ]
                   : [],
               ),
+            ),
+          );
+        if (segment.id === 8 && Array.isArray(value.emoteStates))
+          sections.push(
+            table(
+              '8-states',
+              '表情已读状态',
+              [
+                ['emoteId', '表情编号'],
+                ['name', '表情'],
+                ['stateName', '状态'],
+                ['isUnseen', '未查看'],
+                ['isSeen', '已查看'],
+                ['state', '保存值'],
+              ],
+              rows(value.emoteStates)
+                .filter((entry) => number(entry.state) !== 0)
+                .map((entry) => ({
+                  ...entry,
+                  name:
+                    gameName('Emote', number(entry.emoteId)) ??
+                    `未收录表情 ${entry.emoteId}`,
+                })),
             ),
           );
       } else sections = structuredSections(value, id, name);

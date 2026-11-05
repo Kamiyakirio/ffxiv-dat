@@ -22,6 +22,7 @@ export default function DetailSections({
 }: {
   sections: ReadableSection[];
 }) {
+  if (!sections.some((section) => section.rows.length > 0)) return null;
   return (
     <div className="detail-sections">
       {sections

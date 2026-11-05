@@ -717,7 +717,7 @@ export default function GameDirectoryScanner() {
                   {visibleFiles.length} 个文件
                 </span>
               </div>
-              <div className="navigation-list">
+              <div className="navigation-list compact-records file-records">
                 {visibleFiles.map((file) => {
                   const character = directory?.characters.find(
                     (c) => c.contentId === file.characterId,

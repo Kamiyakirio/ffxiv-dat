@@ -2,7 +2,13 @@
   "source": {
     "executableSha256": "958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9",
     "indexSha256": "44a296b90d72be4430ffd6d68b87f6b8e19f44c0c4cdfec8118ac25e82691adf",
-    "rootExlSha256": "6e0053c2e171fa931a167368631990cb9b8f3f969049d5637a492d901ee8ae25"
+    "rootExlSha256": "6e0053c2e171fa931a167368631990cb9b8f3f969049d5637a492d901ee8ae25",
+    "publicTextSource": {
+      "repository": "thewakingsands/ffxiv-datamining-cn",
+      "revision": "2c6741cffe3cfe70f093c54c463791364e515d8d",
+      "note": "Text lookup only; original matching SqPack is not present in this analysis pass."
+    },
+    "pvpLookupBasis": "Native 0x140c267f0 role classifier and 0x140834810 subrow consumer; fixed public PvPSelectAction/ClassJob reference, not re-extracted target SqPack."
   },
   "jobs": {
     "1": {
@@ -346,6 +352,1422 @@
     "61": {
       "slotIndex": 0,
       "name": "罩眼式墨镜"
+    }
+  },
+  "itemContextEntries": {
+    "1": {
+      "addonRowId": 1748,
+      "name": "出售／出让",
+      "helpAddonRowId": 1767,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "2": {
+      "addonRowId": 94,
+      "name": "添加到附件",
+      "helpAddonRowId": 1768,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "3": {
+      "addonRowId": 95,
+      "name": "交易",
+      "helpAddonRowId": 1769,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "4": {
+      "addonRowId": 1750,
+      "name": "递交",
+      "helpAddonRowId": 1796,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "5": {
+      "addonRowId": 1751,
+      "name": "布置",
+      "helpAddonRowId": 1770,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "6": {
+      "addonRowId": 1753,
+      "name": "使用",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "7": {
+      "addonRowId": 6423,
+      "name": "施肥",
+      "helpAddonRowId": 1770,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "8": {
+      "addonRowId": 1753,
+      "name": "使用",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "9": {
+      "addonRowId": 1753,
+      "name": "使用",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "10": {
+      "addonRowId": 1752,
+      "name": "装备（角色装备／飞空艇潜水艇配件）",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "11": {
+      "addonRowId": 3910,
+      "name": "合成",
+      "helpAddonRowId": 1771,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "12": {
+      "addonRowId": 6504,
+      "name": "选择奖励",
+      "helpAddonRowId": 1770,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "13": {
+      "addonRowId": 6520,
+      "name": "喂食",
+      "helpAddonRowId": 1770,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "14": {
+      "addonRowId": 9042,
+      "name": "选择饲料",
+      "helpAddonRowId": 1772,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "15": {
+      "addonRowId": 9045,
+      "name": "选择教材",
+      "helpAddonRowId": 1772,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "16": {
+      "addonRowId": 9074,
+      "name": "选择陆行鸟",
+      "helpAddonRowId": 1772,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "17": {
+      "addonRowId": 9030,
+      "name": "选择两只陆行鸟配种",
+      "helpAddonRowId": 1772,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "18": {
+      "addonRowId": 97,
+      "name": "交给雇员保管",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "19": {
+      "addonRowId": 98,
+      "name": "从雇员处取回",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "20": {
+      "addonRowId": 99,
+      "name": "到市场出售",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "21": {
+      "addonRowId": 772,
+      "name": "交给雇员保管指定数量",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "22": {
+      "addonRowId": 773,
+      "name": "从雇员处取回指定数量",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "23": {
+      "addonRowId": 2372,
+      "name": "为雇员穿上装备",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "24": {
+      "addonRowId": 5480,
+      "name": "委托雇员出售物品",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "25": {
+      "addonRowId": 1752,
+      "name": "装备（角色装备／飞空艇潜水艇配件）",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "26": {
+      "addonRowId": 1753,
+      "name": "使用",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "27": {
+      "addonRowId": 8100,
+      "name": "解读",
+      "helpAddonRowId": 1774,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "28": {
+      "addonRowId": 92,
+      "name": "拆分",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "29": {
+      "addonRowId": 91,
+      "name": "舍弃",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "30": {
+      "addonRowId": 1754,
+      "name": "卸下装备",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "31": {
+      "addonRowId": 107,
+      "name": "装备修理",
+      "helpAddonRowId": 1756,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "32": {
+      "addonRowId": 4435,
+      "name": "精制魔晶石",
+      "helpAddonRowId": 1771,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "33": {
+      "addonRowId": 4436,
+      "name": "镶嵌魔晶石",
+      "helpAddonRowId": 1771,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "34": {
+      "addonRowId": 4695,
+      "name": "染色",
+      "helpAddonRowId": 1758,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "35": {
+      "addonRowId": 4695,
+      "name": "染色",
+      "helpAddonRowId": 1758,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "36": {
+      "addonRowId": 3700,
+      "name": "武具投影",
+      "helpAddonRowId": 1759,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "37": {
+      "addonRowId": 1387,
+      "name": "放入兵装库",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "38": {
+      "addonRowId": 1388,
+      "name": "放入背包",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "39": {
+      "addonRowId": 3303,
+      "name": "设置热键",
+      "helpAddonRowId": 1760,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "40": {
+      "addonRowId": 1749,
+      "name": "自动整理／撤销整理",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "41": {
+      "addonRowId": 4697,
+      "name": "展示道具属性",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "42": {
+      "addonRowId": 783,
+      "name": "查看套装列表",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "43": {
+      "addonRowId": 1815,
+      "name": "道具分解",
+      "helpAddonRowId": 1756,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "44": {
+      "addonRowId": 2150,
+      "name": "装备属性对比",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "45": {
+      "addonRowId": 4379,
+      "name": "查看持有情况",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "46": {
+      "addonRowId": 2426,
+      "name": "试穿",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "47": {
+      "addonRowId": 2160,
+      "name": "精选",
+      "helpAddonRowId": 1757,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "48": {
+      "addonRowId": 154,
+      "name": "降低品质",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "49": {
+      "addonRowId": 5481,
+      "name": "二级指令",
+      "helpAddonRowId": 1794,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "50": {
+      "addonRowId": 5482,
+      "name": "打开自定义窗口",
+      "helpAddonRowId": 1795,
+      "nativeListIndex": 0,
+      "flagsRaw": [0, 0, 0, 0]
+    },
+    "51": {
+      "addonRowId": 1753,
+      "name": "使用",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "52": {
+      "addonRowId": 1753,
+      "name": "使用",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "53": {
+      "addonRowId": 5483,
+      "name": "预览",
+      "helpAddonRowId": 1797,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "54": {
+      "addonRowId": 6840,
+      "name": "收入仓库",
+      "helpAddonRowId": 1770,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "55": {
+      "addonRowId": 5484,
+      "name": "回收魔晶石",
+      "helpAddonRowId": 1771,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "56": {
+      "addonRowId": 881,
+      "name": "放入陆行鸟鞍囊",
+      "helpAddonRowId": 1798,
+      "nativeListIndex": 1,
+      "flagsRaw": [1, 1, 0, 0]
+    },
+    "57": {
+      "addonRowId": 886,
+      "name": "将指定数量放入陆行鸟鞍囊",
+      "helpAddonRowId": 1798,
+      "nativeListIndex": 1,
+      "flagsRaw": [1, 1, 0, 0]
+    },
+    "58": {
+      "addonRowId": 887,
+      "name": "从陆行鸟鞍囊中取回",
+      "helpAddonRowId": 1798,
+      "nativeListIndex": 1,
+      "flagsRaw": [1, 1, 0, 0]
+    },
+    "59": {
+      "addonRowId": 888,
+      "name": "从陆行鸟鞍囊中取回指定数量",
+      "helpAddonRowId": 1798,
+      "nativeListIndex": 1,
+      "flagsRaw": [1, 1, 0, 0]
+    },
+    "60": {
+      "addonRowId": 1752,
+      "name": "装备（角色装备／飞空艇潜水艇配件）",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "61": {
+      "addonRowId": 1390,
+      "name": "撤销整理",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "62": {
+      "addonRowId": 1750,
+      "name": "递交",
+      "helpAddonRowId": 1796,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "63": {
+      "addonRowId": 1750,
+      "name": "递交",
+      "helpAddonRowId": 1796,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "64": {
+      "addonRowId": 13439,
+      "name": "查看它能用来制作什么道具",
+      "helpAddonRowId": 1756,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "65": {
+      "addonRowId": 14915,
+      "name": "确认内容",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "66": {
+      "addonRowId": 2439,
+      "name": "雇员试穿",
+      "helpAddonRowId": 1773,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "67": {
+      "addonRowId": 15525,
+      "name": "登记庭具",
+      "helpAddonRowId": 1799,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "68": {
+      "addonRowId": 15564,
+      "name": "投影布置",
+      "helpAddonRowId": 1799,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    },
+    "69": {
+      "addonRowId": 15635,
+      "name": "查看套装幻影化所需的装备组合",
+      "helpAddonRowId": 1775,
+      "nativeListIndex": 0,
+      "flagsRaw": [1, 0, 0, 0]
+    }
+  },
+  "dataCenters": {
+    "101": "陆行鸟",
+    "102": "莫古力",
+    "103": "猫小胖",
+    "104": "豆豆柴"
+  },
+  "pvpRoleActions": {
+    "0": [
+      {
+        "index": 0,
+        "actionId": 43243,
+        "name": "暴怒"
+      },
+      {
+        "index": 1,
+        "actionId": 43244,
+        "name": "铁壁"
+      },
+      {
+        "index": 2,
+        "actionId": 43245,
+        "name": "全力挥打"
+      }
+    ],
+    "1": [
+      {
+        "index": 0,
+        "actionId": 43246,
+        "name": "浴血"
+      },
+      {
+        "index": 1,
+        "actionId": 43247,
+        "name": "敏捷"
+      },
+      {
+        "index": 2,
+        "actionId": 43248,
+        "name": "猛击"
+      }
+    ],
+    "2": [
+      {
+        "index": 0,
+        "actionId": 43249,
+        "name": "速度之星"
+      },
+      {
+        "index": 1,
+        "actionId": 43250,
+        "name": "勇气"
+      },
+      {
+        "index": 2,
+        "actionId": 43251,
+        "name": "锐眼追击"
+      }
+    ],
+    "3": [
+      {
+        "index": 0,
+        "actionId": 43252,
+        "name": "彗星"
+      },
+      {
+        "index": 1,
+        "actionId": 43291,
+        "name": "幻影弹"
+      },
+      {
+        "index": 2,
+        "actionId": 43254,
+        "name": "武装削弱"
+      }
+    ],
+    "4": [
+      {
+        "index": 0,
+        "actionId": 43255,
+        "name": "疗愈"
+      },
+      {
+        "index": 1,
+        "actionId": 43256,
+        "name": "坚石肤"
+      },
+      {
+        "index": 2,
+        "actionId": 43257,
+        "name": "溃破"
+      }
+    ]
+  },
+  "pvpRoleGroupByClassJob": {
+    "1": 0,
+    "2": 1,
+    "3": 0,
+    "4": 1,
+    "5": 2,
+    "6": 4,
+    "7": 3,
+    "19": 0,
+    "20": 1,
+    "21": 0,
+    "22": 1,
+    "23": 2,
+    "24": 4,
+    "25": 3,
+    "26": 3,
+    "27": 3,
+    "28": 4,
+    "29": 1,
+    "30": 1,
+    "31": 2,
+    "32": 0,
+    "33": 4,
+    "34": 1,
+    "35": 3,
+    "37": 0,
+    "38": 2,
+    "39": 1,
+    "40": 4,
+    "41": 1,
+    "42": 3
+  },
+  "actionSettings": {
+    "92": {
+      "rowId": 1,
+      "replacementActionId": 7399,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "136": {
+      "rowId": 2,
+      "replacementActionId": 37009,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16493": {
+      "rowId": 3,
+      "replacementActionId": 25774,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "7414": {
+      "rowId": 4,
+      "replacementActionId": 36982,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "25874": {
+      "rowId": 5,
+      "replacementActionId": 25875,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16164": {
+      "rowId": 6,
+      "replacementActionId": 36937,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "3559": {
+      "rowId": 7,
+      "replacementActionId": 7404,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "7394": {
+      "rowId": 8,
+      "replacementActionId": 36944,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "25766": {
+      "rowId": 9,
+      "replacementActionId": 36949,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "7395": {
+      "rowId": 10,
+      "replacementActionId": 36950,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "36940": {
+      "rowId": 11,
+      "replacementActionId": 25761,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "36941": {
+      "rowId": 12,
+      "replacementActionId": 25763,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "3555": {
+      "rowId": 13,
+      "replacementActionId": 7400,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "96": {
+      "rowId": 14,
+      "replacementActionId": 36953,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16480": {
+      "rowId": 15,
+      "replacementActionId": 36956,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1500
+    },
+    "20": {
+      "rowId": 16,
+      "replacementActionId": 3538,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "3639": {
+      "rowId": 17,
+      "replacementActionId": 25755,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16472": {
+      "rowId": 18,
+      "replacementActionId": 36932,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16138": {
+      "rowId": 19,
+      "replacementActionId": 16153,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16482": {
+      "rowId": 20,
+      "replacementActionId": 36964,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "107": {
+      "rowId": 21,
+      "replacementActionId": 36976,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "25785": {
+      "rowId": 22,
+      "replacementActionId": 36977,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "3573": {
+      "rowId": 23,
+      "replacementActionId": 36988,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "25801": {
+      "rowId": 24,
+      "replacementActionId": 36991,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "7520": {
+      "rowId": 25,
+      "replacementActionId": 37005,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "34685": {
+      "rowId": 26,
+      "replacementActionId": 34686,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16536": {
+      "rowId": 27,
+      "replacementActionId": 37011,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16545": {
+      "rowId": 28,
+      "replacementActionId": 16546,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "7436": {
+      "rowId": 29,
+      "replacementActionId": 37012,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16552": {
+      "rowId": 30,
+      "replacementActionId": 37029,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16559": {
+      "rowId": 31,
+      "replacementActionId": 37031,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "16011": {
+      "rowId": 32,
+      "replacementActionId": 25792,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": false,
+      "defaultAntiMisactivation": false,
+      "antiMisactivationDelayMilliseconds": 1000
+    },
+    "7521": {
+      "rowId": 33,
+      "replacementActionId": 37007,
+      "supportsActionChange": true,
+      "defaultActionChange": true,
+      "supportsAntiMisactivation": true,
+      "defaultAntiMisactivation": true,
+      "antiMisactivationDelayMilliseconds": 1000
+    }
+  },
+  "itemContextDefaultOrder": [
+    1, 2, 3, 4, 67, 68, 5, 54, 7, 11, 12, 13, 14, 15, 16, 17, 20, 18, 21, 19,
+    22, 56, 57, 58, 59, 24, 26, 65, 27, 23, 25, 30, 44, 66, 46, 31, 32, 33, 55,
+    34, 36, 43, 47, 48, 42, 45, 41, 64, 69, 39, 37, 38, 53, 28, 29, 40, 49, 50
+  ],
+  "blueMageActions": {
+    "0": {
+      "actionId": 0,
+      "name": null
+    },
+    "1": {
+      "actionId": 11383,
+      "name": "鼻息"
+    },
+    "2": {
+      "actionId": 11384,
+      "name": "4星吨"
+    },
+    "3": {
+      "actionId": 11385,
+      "name": "水炮"
+    },
+    "4": {
+      "actionId": 11386,
+      "name": "苦闷之歌"
+    },
+    "5": {
+      "actionId": 11387,
+      "name": "高压电流"
+    },
+    "6": {
+      "actionId": 11388,
+      "name": "臭气"
+    },
+    "7": {
+      "actionId": 11389,
+      "name": "狂乱"
+    },
+    "8": {
+      "actionId": 11390,
+      "name": "水流吐息"
+    },
+    "9": {
+      "actionId": 11391,
+      "name": "平原震裂"
+    },
+    "10": {
+      "actionId": 11392,
+      "name": "橡果炸弹"
+    },
+    "11": {
+      "actionId": 11393,
+      "name": "怒发冲冠"
+    },
+    "12": {
+      "actionId": 11394,
+      "name": "精神冲击"
+    },
+    "13": {
+      "actionId": 11395,
+      "name": "吸血"
+    },
+    "14": {
+      "actionId": 11396,
+      "name": "投弹"
+    },
+    "15": {
+      "actionId": 11397,
+      "name": "千针刺"
+    },
+    "16": {
+      "actionId": 11398,
+      "name": "钻头炮"
+    },
+    "17": {
+      "actionId": 11399,
+      "name": "诡异视线"
+    },
+    "18": {
+      "actionId": 11400,
+      "name": "锋利菜刀"
+    },
+    "19": {
+      "actionId": 11401,
+      "name": "若隐若现"
+    },
+    "20": {
+      "actionId": 11402,
+      "name": "火炎放射"
+    },
+    "21": {
+      "actionId": 11403,
+      "name": "拍掌"
+    },
+    "22": {
+      "actionId": 11404,
+      "name": "怒视"
+    },
+    "23": {
+      "actionId": 11405,
+      "name": "导弹"
+    },
+    "24": {
+      "actionId": 11406,
+      "name": "白风"
+    },
+    "25": {
+      "actionId": 11407,
+      "name": "终极针"
+    },
+    "26": {
+      "actionId": 11408,
+      "name": "自爆"
+    },
+    "27": {
+      "actionId": 11409,
+      "name": "融合"
+    },
+    "28": {
+      "actionId": 11410,
+      "name": "油性分泌物"
+    },
+    "29": {
+      "actionId": 11411,
+      "name": "破防"
+    },
+    "30": {
+      "actionId": 11412,
+      "name": "滑舌"
+    },
+    "31": {
+      "actionId": 11413,
+      "name": "螺旋尾"
+    },
+    "32": {
+      "actionId": 11414,
+      "name": "5级石化"
+    },
+    "33": {
+      "actionId": 11415,
+      "name": "月之笛"
+    },
+    "34": {
+      "actionId": 11416,
+      "name": "死亡宣告"
+    },
+    "35": {
+      "actionId": 11417,
+      "name": "强力守护"
+    },
+    "36": {
+      "actionId": 11418,
+      "name": "冰棘屏障"
+    },
+    "37": {
+      "actionId": 11419,
+      "name": "寒冰咆哮"
+    },
+    "38": {
+      "actionId": 11420,
+      "name": "雷电咆哮"
+    },
+    "39": {
+      "actionId": 11421,
+      "name": "惊奇光"
+    },
+    "40": {
+      "actionId": 11422,
+      "name": "喷墨"
+    },
+    "41": {
+      "actionId": 11423,
+      "name": "投掷沙丁鱼"
+    },
+    "42": {
+      "actionId": 11424,
+      "name": "超硬化"
+    },
+    "43": {
+      "actionId": 11425,
+      "name": "火投枪"
+    },
+    "44": {
+      "actionId": 11426,
+      "name": "飞翎雨"
+    },
+    "45": {
+      "actionId": 11427,
+      "name": "地火喷发"
+    },
+    "46": {
+      "actionId": 11428,
+      "name": "山崩"
+    },
+    "47": {
+      "actionId": 11429,
+      "name": "轰雷"
+    },
+    "48": {
+      "actionId": 11430,
+      "name": "冰雪乱舞"
+    },
+    "49": {
+      "actionId": 11431,
+      "name": "水神的面纱"
+    },
+    "50": {
+      "actionId": 18295,
+      "name": "高山气流"
+    },
+    "51": {
+      "actionId": 18296,
+      "name": "万变水波"
+    },
+    "52": {
+      "actionId": 18297,
+      "name": "狂风暴雪"
+    },
+    "53": {
+      "actionId": 18298,
+      "name": "生物电"
+    },
+    "54": {
+      "actionId": 18299,
+      "name": "寒光"
+    },
+    "55": {
+      "actionId": 18300,
+      "name": "深渊贯穿"
+    },
+    "56": {
+      "actionId": 18301,
+      "name": "唧唧咋咋"
+    },
+    "57": {
+      "actionId": 18302,
+      "name": "怪音波"
+    },
+    "58": {
+      "actionId": 18303,
+      "name": "绒绒治疗"
+    },
+    "59": {
+      "actionId": 18304,
+      "name": "哥布防御"
+    },
+    "60": {
+      "actionId": 18305,
+      "name": "魔法锤"
+    },
+    "61": {
+      "actionId": 18306,
+      "name": "防御指示"
+    },
+    "62": {
+      "actionId": 18307,
+      "name": "蛙腿"
+    },
+    "63": {
+      "actionId": 18308,
+      "name": "音爆"
+    },
+    "64": {
+      "actionId": 18309,
+      "name": "口笛"
+    },
+    "65": {
+      "actionId": 18310,
+      "name": "白骑士之旅"
+    },
+    "66": {
+      "actionId": 18311,
+      "name": "黑骑士之旅"
+    },
+    "67": {
+      "actionId": 18312,
+      "name": "5级即死"
+    },
+    "68": {
+      "actionId": 18313,
+      "name": "火箭炮"
+    },
+    "69": {
+      "actionId": 18314,
+      "name": "永恒射线"
+    },
+    "70": {
+      "actionId": 18315,
+      "name": "仙人盾"
+    },
+    "71": {
+      "actionId": 18316,
+      "name": "复仇冲击"
+    },
+    "72": {
+      "actionId": 18317,
+      "name": "天使低语"
+    },
+    "73": {
+      "actionId": 18318,
+      "name": "蜕皮"
+    },
+    "74": {
+      "actionId": 18319,
+      "name": "逆流"
+    },
+    "75": {
+      "actionId": 18320,
+      "name": "捕食"
+    },
+    "76": {
+      "actionId": 18321,
+      "name": "小侦测"
+    },
+    "77": {
+      "actionId": 18322,
+      "name": "以太复制"
+    },
+    "78": {
+      "actionId": 18323,
+      "name": "穿甲散弹"
+    },
+    "79": {
+      "actionId": 18324,
+      "name": "类星体"
+    },
+    "80": {
+      "actionId": 18325,
+      "name": "正义飞踢"
+    },
+    "81": {
+      "actionId": 23264,
+      "name": "渔叉三段"
+    },
+    "82": {
+      "actionId": 23265,
+      "name": "哔哩哔哩"
+    },
+    "83": {
+      "actionId": 23266,
+      "name": "掀地板之术"
+    },
+    "84": {
+      "actionId": 23267,
+      "name": "彻骨雾寒"
+    },
+    "85": {
+      "actionId": 23269,
+      "name": "赞歌"
+    },
+    "86": {
+      "actionId": 23270,
+      "name": "圣光射线"
+    },
+    "87": {
+      "actionId": 23271,
+      "name": "污泥泼洒"
+    },
+    "88": {
+      "actionId": 23272,
+      "name": "天使的点心"
+    },
+    "89": {
+      "actionId": 23273,
+      "name": "玄结界"
+    },
+    "90": {
+      "actionId": 23275,
+      "name": "斗灵弹"
+    },
+    "91": {
+      "actionId": 23276,
+      "name": "斗争本能"
+    },
+    "92": {
+      "actionId": 23277,
+      "name": "超振动"
+    },
+    "93": {
+      "actionId": 23278,
+      "name": "冰焰"
+    },
+    "94": {
+      "actionId": 23279,
+      "name": "芥末爆弹"
+    },
+    "95": {
+      "actionId": 23280,
+      "name": "龙之力"
+    },
+    "96": {
+      "actionId": 23281,
+      "name": "以太火花"
+    },
+    "97": {
+      "actionId": 23282,
+      "name": "水力吸引"
+    },
+    "98": {
+      "actionId": 23283,
+      "name": "水脉诅咒"
+    },
+    "99": {
+      "actionId": 23284,
+      "name": "陆行鸟陨石"
+    },
+    "100": {
+      "actionId": 23285,
+      "name": "马特拉魔术"
+    },
+    "101": {
+      "actionId": 23286,
+      "name": "生成外设"
+    },
+    "102": {
+      "actionId": 23287,
+      "name": "如意大旋风"
+    },
+    "103": {
+      "actionId": 23288,
+      "name": "鬼宿脚"
+    },
+    "104": {
+      "actionId": 23290,
+      "name": "月下彼岸花"
+    },
+    "105": {
+      "actionId": 34563,
+      "name": "哥布林乱拳"
+    },
+    "106": {
+      "actionId": 34564,
+      "name": "大回旋"
+    },
+    "107": {
+      "actionId": 34565,
+      "name": "刺阵"
+    },
+    "108": {
+      "actionId": 34566,
+      "name": "补水"
+    },
+    "109": {
+      "actionId": 34567,
+      "name": "魔法吐息"
+    },
+    "110": {
+      "actionId": 34568,
+      "name": "兽魂的愤怒"
+    },
+    "111": {
+      "actionId": 34569,
+      "name": "玩泥球"
+    },
+    "112": {
+      "actionId": 34570,
+      "name": "大扫除"
+    },
+    "113": {
+      "actionId": 34571,
+      "name": "红宝石电圈"
+    },
+    "114": {
+      "actionId": 34572,
+      "name": "魔之符文"
+    },
+    "115": {
+      "actionId": 34573,
+      "name": "空间转换"
+    },
+    "116": {
+      "actionId": 34574,
+      "name": "加强信音"
+    },
+    "117": {
+      "actionId": 34575,
+      "name": "力场"
+    },
+    "118": {
+      "actionId": 34576,
+      "name": "断罪飞翔"
+    },
+    "119": {
+      "actionId": 34577,
+      "name": "激射眼"
+    },
+    "120": {
+      "actionId": 34578,
+      "name": "糖果手杖"
+    },
+    "121": {
+      "actionId": 34579,
+      "name": "必灭之炎"
+    },
+    "122": {
+      "actionId": 34580,
+      "name": "咕噜咕噜"
+    },
+    "123": {
+      "actionId": 34581,
+      "name": "启示录"
+    },
+    "124": {
+      "actionId": 34582,
+      "name": "终有一死"
     }
   }
 }

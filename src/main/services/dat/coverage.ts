@@ -9,7 +9,12 @@ const known: Record<number, string[]> = {
   5: ['20 条传送记录', '以太之光编号', '非空记录标志', '住宅小区/地块/子编号'],
   6: ['两组物品菜单优先级数组', '256 位设置位图'],
   7: ['内部版本', '46 个职业选择槽', '选择值加一编码'],
-  8: ['最近使用的表情', '收藏表情', '已查看表情位图'],
+  8: [
+    '最近使用的表情',
+    '收藏表情',
+    '按表情编号减一索引的两位状态',
+    '未查看/已查看表情',
+  ],
   9: ['未查看宠物', '收藏宠物'],
   10: ['未查看坐骑', '收藏坐骑', 'Mount.Order + 1 编号规则'],
   11: ['麻将内部块的边界与字节'],
@@ -31,7 +36,12 @@ const known: Record<number, string[]> = {
   27: ['两个任务技能槽'],
   28: ['5 个战术板数据块', '文件夹与板面', '对象类型/文字/位置/角度/缩放/颜色'],
   29: ['未查看鱼种编号', '条目计数'],
-  30: ['技能编号与两个保存状态字节'],
+  30: [
+    '技能编号',
+    '启用技能变换',
+    '启用复唱时间防止技能误发动',
+    '设置原始字节',
+  ],
   31: ['10 条屏蔽词', '频道标志', '启用设置'],
   32: ['倒计时秒数'],
   33: ['防护/治疗/进攻职业排序'],
@@ -172,20 +182,30 @@ export function segmentCoverage(
     }
   }
   visit(data, '', 0);
-  if (id === 30)
-    unresolved.set('action-flags', {
-      field: 'actions[].flag0 / flag1',
-      reason:
-        '技能编号与两列状态已完整读取；公开 ActionModule 只定义两个未命名集合，状态值对应的具体业务用途尚未定义。',
-      kind: 'meaning',
-    });
-  if (id === 8)
-    unresolved.set('emote-bits', {
-      field: 'seenEmotesBitmaskHex 的索引对应',
-      reason:
-        '位图字节已读取，但直接按 Emote 行号匹配无法覆盖全部历史/收藏记录，索引转换尚需进一步证据。',
-      kind: 'reference',
-    });
+  if (id === 30) {
+    if (!Array.isArray(data.actions))
+      unresolved.set('action-layout', {
+        field: 'actions',
+        reason:
+          '字段流不符合已确认的 A:u32、0:u8、1:u8 成组记录，已保留各字段原值。',
+        kind: 'meaning',
+      });
+    else {
+      const actions = data.actions as Record<string, unknown>[];
+      for (const [rawField, interpretedField] of [
+        ['flag0', 'actionChangeEnabled'],
+        ['flag1', 'antiMisactivationEnabled'],
+      ]) {
+        if (actions.some((entry) => entry[interpretedField] === null))
+          unresolved.set(rawField, {
+            field: `actions[].${rawField}`,
+            reason:
+              '布尔保存字段出现 0/1 之外的原值，已保留原字节，未将异常值当作布尔状态。',
+            kind: 'meaning',
+          });
+      }
+    }
+  }
   if (id === 31) {
     if (Number(data.setting) > 1)
       unresolved.set('term-setting', {

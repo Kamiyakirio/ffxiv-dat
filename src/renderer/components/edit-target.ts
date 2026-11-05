@@ -219,8 +219,13 @@ export function sectionEditTarget(
   if (sourceKey) {
     const scalarKeys: Record<number, Record<string, string>> = {
       15: {
-        cameraAngle: 'cameraAngle',
-        cameraRotation: 'cameraRotation',
+        cameraDistance: 'cameraDistance',
+        cameraFieldOfView: 'cameraFieldOfView',
+        cameraDirectionHorizontal: 'cameraDirectionHorizontal',
+        cameraDirectionVertical: 'cameraDirectionVertical',
+        isCharacterOrientedCamera: 'characterCamera',
+        isCharacterOrientedLight: 'characterLight',
+        isManualBrightnessEnabled: 'manualEnabled',
         isCharacterOrientedCameraRaw: 'characterCamera',
         isCharacterOrientedLightRaw: 'characterLight',
         isManualBrightnessEnabledRaw: 'manualEnabled',
@@ -317,6 +322,7 @@ export function sectionEditTarget(
     return target;
   }
   if ([8, 9, 10, 19].includes(n)) {
+    if (n === 8 && id === '8-states') return target;
     const kind = id.endsWith('-favorites')
       ? 'favorite'
       : id.endsWith('-history')
@@ -344,13 +350,21 @@ export function sectionEditTarget(
       ? exact(`watch.${presentIndex(values.achievementWatchlist, rowIndex!)}`)
       : scoped('watch.');
   if (n === 15) {
-    if (id === '15-lights')
-      return row ? scoped(`light.${row.index}.`) : scoped('light.');
-    if (id !== '15-values') return target;
+    if (id === 'group-pose-lights')
+      return row ? scoped(`light.${Number(row.slot) - 1}.`) : scoped('light.');
+    if (id === 'group-pose-camera')
+      return exact(
+        'cameraDistance',
+        'cameraFieldOfView',
+        'cameraDirectionHorizontal',
+        'cameraDirectionVertical',
+        'cameraPosition0',
+        'cameraPosition1',
+        'cameraPosition2',
+        'characterCamera',
+      );
+    if (id !== 'group-pose-lighting-settings') return target;
     return exact(
-      'cameraAngle',
-      'cameraRotation',
-      'characterCamera',
       'characterLight',
       'manualEnabled',
       'brightness',
@@ -456,16 +470,12 @@ export function sectionEditTarget(
         : scoped('seen.')
       : target;
   if (n === 41) {
-    const m = /^41-panels-(\d+)-slots$/.exec(id);
+    const m = /^quick-panel-(\d+)-slots$/.exec(id);
     return m
       ? row
-        ? scoped(`panel.${m[1]}.${row.slot}.`)
+        ? scoped(`panel.${m[1]}.${Number(row.slot) - 1}.`)
         : scoped(`panel.${m[1]}.`)
-      : row
-        ? scoped(`panel.${row.index}.`)
-        : id === '41-panels'
-          ? scoped('panel.')
-          : target;
+      : target;
   }
   if (n === 43) return row ? exact(`pet.${rowIndex}.size`) : scoped('pet.');
   return target;

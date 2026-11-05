@@ -1,5 +1,8 @@
 import { decodeNativeUiSegment } from './uisave-native.ts';
 import { decodeNativeCwls } from './uisave-cwls.ts';
+import { decodeNativeSocial } from './uisave-social.ts';
+import { decodeNativeAoz } from './uisave-aoz.ts';
+import { decodeNativeRetainerComments } from './uisave-retainers.ts';
 
 function uints(data: Buffer, offset: number, count: number, width: number) {
   if (offset + count * width > data.length)
@@ -9,56 +12,40 @@ function uints(data: Buffer, offset: number, count: number, width: number) {
   );
 }
 
-function string(data: Buffer) {
-  const zero = data.indexOf(0);
-  return data.subarray(0, zero < 0 ? data.length : zero).toString('utf8');
-}
-
-/** Printable NUL-separated strings are candidates, not inferred record names. */
-function stringCandidates(data: Buffer) {
-  const decoder = new TextDecoder('utf-8', { fatal: true });
-  const result: { offset: number; byteLength: number; text: string }[] = [];
-  let offset = 0;
-  while (offset < data.length) {
-    const end = data.indexOf(0, offset);
-    if (end < 0) break;
-    if (end - offset >= 2) {
-      try {
-        const text = decoder.decode(data.subarray(offset, end));
-        if (text.length >= 2 && !/[\p{Cc}\p{Cf}\p{Cs}]/u.test(text)) {
-          result.push({ offset, byteLength: end - offset, text });
-        }
-      } catch {
-        /* Binary data need not be UTF-8. */
-      }
-    }
-    offset = end + 1;
-  }
-  return result;
-}
-
 function decodeAdditionalUiSegmentData(
   id: number,
   version: number,
   data: Buffer,
 ): Record<string, unknown> | null {
   if (id === 1 && version === 101 && data.length === 168) {
+    // Target CN client: writer 0x1407ef9b0 zeroes 169 bytes, then writes
+    // count:u8 and (RetainerId:u64, VentureComplete:u32) at stride 16.
+    // 0x140cb9405/0x140cb951b pass RetainerManager's active RetainerId and
+    // 0x140b051f0's Retainer+0x3c (VentureComplete) to 0x1407f0180.
+    if (data[0] > 10) return null;
     return {
-      retainerCount: data.readUInt32LE(0),
-      countCandidate: data.readUInt32LE(0),
+      savedEntryCount: data[0],
+      retainerCount: data[0],
+      countCandidate: data[0],
+      reservedHeaderHex: data.subarray(1, 8).toString('hex'),
       unknownHeaderHex: data.subarray(4, 8).toString('hex'),
       tasks: Array.from({ length: 10 }, (_, index) => {
         const offset = 8 + index * 16;
         return {
           index,
           offset,
+          isStoredEntry: index < data[0],
           retainerId: data.readBigUInt64LE(offset).toString(),
           retainerIdCandidate: data.readBigUInt64LE(offset).toString(),
+          completionUnix: data.readUInt32LE(offset + 8),
           completionUnixCandidate: data.readUInt32LE(offset + 8),
+          reservedTailHex: data
+            .subarray(offset + 12, offset + 16)
+            .toString('hex'),
           unknown: data.readUInt32LE(offset + 12),
         };
       }),
-      note: 'u64/u32/u32 record widths and timestamps fit both samples; RetainerTaskDataModule does not publish field names.',
+      note: '首字节表示保存的雇员任务条目数；最多10条，每条保存64位雇员ID与探险完成时间。其余前导与每条尾部四字节由目标客户端清零，旧Candidate字段作为兼容别名保留。',
     };
   }
   if (
@@ -89,29 +76,6 @@ function decodeAdditionalUiSegmentData(
       note: 'The disk contains a 96-byte patch-mark block and a 256-byte UI flag block. Runtime PatchMarkIds are not serialized in this sampled layout.',
     };
   }
-  if (id === 4 && version === 106 && data.length === 46080) {
-    return {
-      groupLabelsCandidate: Array.from({ length: 7 }, (_, index) => ({
-        index,
-        offset: 20 + index * 64,
-        name: string(data.subarray(20 + index * 64, 80 + index * 64)),
-      })),
-      contactRecordsCandidate: Array.from({ length: 50 }, (_, index) => {
-        const offset = 488 + index * 64;
-        return {
-          index,
-          offset,
-          name: string(data.subarray(offset, offset + 32)),
-          contentIdCandidate: data.readBigUInt64LE(offset + 32).toString(),
-          unknownAfterContentIdHex: data
-            .subarray(offset + 40, offset + 64)
-            .toString('hex'),
-        };
-      }),
-      printableStringCandidates: stringCandidates(data),
-      note: 'Group/title and 50 contact record strides are supported by the historical UISAVE reader and positive names/Content IDs. Other social blocks are not mapped to friend/blacklist/mutelist categories.',
-    };
-  }
   if (id === 11 && version === 0 && data.length >= 16) {
     const chunks: Record<string, unknown>[] = [];
     let offset = 0;
@@ -140,28 +104,93 @@ function decodeAdditionalUiSegmentData(
     for (const chunk of chunks) {
       const bytes = Buffer.from(String(chunk.dataHex), 'hex');
       if (chunk.key === 2 && bytes.length === 16) {
+        // Target SHA-256 958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9.
+        // 0x1408044a7..4bf writes key 2, size 16, from EmjModule+0x48;
+        // 0x140804757 copies it back. The getter/setter at 0x140803e70/
+        // 0x140803ef0 connect the first nine public settings to the UI at
+        // 0x1410c0d40/0x1410c12e2. Voice/costume setters are called at
+        // 0x1410c19ee/0x1410c1a02; disable-voice at 0x1410b8a1a.
+        const savedSettings = {
+          tileSet: bytes[0],
+          hideHints: bytes[1],
+          hideDangerousTileMarker: bytes[2],
+          hideChatLog: bytes[3],
+          unknownSettingsByte4: bytes[4],
+          unknownSettingsByte5: bytes[5],
+          hideTileNames: bytes[6],
+          showHighResolutionLayout: bytes[7],
+          showTraditionalDoraIndicator: bytes[8],
+          ownPlayerNameSetting: bytes[9],
+          othersPlayerNameSetting: bytes[10],
+          disableCharacterVoices: bytes[11],
+          emjVoiceNpc: bytes[12],
+          emjCostumeId: bytes[13],
+          unknownTailHex: bytes.subarray(14).toString('hex'),
+        };
+        const bool = (raw: number) => (raw <= 1 ? raw === 1 : null);
+        // Match 0x140804767..7b7 load guards. For the other four bools the
+        // reader keeps the byte: noncanonical values remain uninterpreted.
+        const settings = {
+          ...savedSettings,
+          tileSet: bytes[0] < 2 ? bytes[0] : 0,
+          hideHints: bool(bytes[1]),
+          hideDangerousTileMarker: bool(bytes[2]),
+          hideChatLog: bool(bytes[3]),
+          hideTileNames: bytes[6] === 1,
+          showHighResolutionLayout: bool(bytes[7]),
+          showTraditionalDoraIndicator: bytes[8] !== 0,
+          ownPlayerNameSetting: bytes[9] < 5 ? bytes[9] : 0,
+          othersPlayerNameSetting: bytes[10] < 5 ? bytes[10] : 0,
+          disableCharacterVoices: bytes[11] === 1,
+          emjVoiceNpc: bytes[12] < 15 ? bytes[12] : 0,
+          emjCostumeId: bytes[13] < 2 ? bytes[13] : 0,
+        };
         chunk.data = {
-          settingsCandidate: {
-            tileSet: bytes[0],
-            hideHints: bytes[1] !== 0,
-            hideDangerousTileMarker: bytes[2] !== 0,
-            hideChatLog: bytes[3] !== 0,
-            unknownSettingsByte4: bytes[4],
-            unknownSettingsByte5: bytes[5],
-            hideTileNames: bytes[6] !== 0,
-            showHighResolutionLayout: bytes[7] !== 0,
-            showTraditionalDoraIndicator: bytes[8] !== 0,
-            ownPlayerNameSetting: bytes[9],
-            othersPlayerNameSetting: bytes[10],
-            disableCharacterVoices: bytes[11] !== 0,
-            emjVoiceNpc: bytes[12],
-            emjCostumeId: bytes[13],
-            unknownTailHex: bytes.subarray(14).toString('hex'),
-          },
+          savedSettings,
+          settings,
+          settingsCandidate: settings, // Compatibility alias.
+        };
+      } else if (
+        (chunk.key === 3 && bytes.length === 3) ||
+        (chunk.key === 4 && bytes.length === 4)
+      ) {
+        // 0x1408044c6..512 writes keys 3/4 from +0xc8/+0xcc;
+        // 0x140804742..755 reads them back. 0x1408042f0/0x1408043a0
+        // test bit (ID - 1), rejecting voice IDs outside 1..14 and costume
+        // seen IDs outside 1..21. Costume IDs come from EmjCostume+0x1c
+        // (0x1410c31df), not its subrow index used by settings.emjCostumeId.
+        const voice = chunk.key === 3;
+        const limit = voice ? 14 : 21;
+        const seenIds = Array.from(
+          { length: limit },
+          (_, index) => index + 1,
+        ).filter((id) => (bytes[(id - 1) >> 3] & (1 << ((id - 1) & 7))) !== 0);
+        const reservedBits = Buffer.from(bytes);
+        for (let index = 0; index < limit; index++)
+          reservedBits[index >> 3] &= ~(1 << (index & 7));
+        chunk.data = {
+          ...(voice
+            ? { seenVoiceNpcIds: seenIds }
+            : { seenCostumeIds: seenIds }),
+          seenBitflagsHex: bytes.toString('hex'),
+          reservedBitsHex: reservedBits.toString('hex'),
+          idMeaning: voice
+            ? 'EmjVoiceNpc row ID; bit index = ID - 1, valid IDs 1..14'
+            : 'EmjCostume seen ID (+0x1c); bit index = ID - 1, valid IDs 1..21; not the costume subrow index',
         };
       } else if (chunk.key === 0 && bytes.length === 80) {
         chunk.data = {
           statisticsCandidate: {
+            // 0x140803fd0 shifts four 16B entries and writes the newest at
+            // module+0x58. Value and clock meanings are intentionally unnamed.
+            historyEntries: Array.from({ length: 5 }, (_, index) => ({
+              index,
+              valueRaw: bytes.readInt32LE(index * 16),
+              timeRaw: bytes.readInt32LE(index * 16 + 4),
+              reservedHex: bytes
+                .subarray(index * 16 + 8, index * 16 + 16)
+                .toString('hex'),
+            })),
             unknownValue: bytes.readInt32LE(0),
             timestampCandidate: bytes.readInt32LE(4),
             unknownGapHex: bytes.subarray(8, 16).toString('hex'),
@@ -175,48 +204,7 @@ function decodeAdditionalUiSegmentData(
     return {
       chunks,
       zeroPaddingHex: data.subarray(offset).toString('hex'),
-      note: 'Block 2 has 14 settings bytes plus 2 stored bytes matching EmjModule+0x48..0x55; block 0 has 80 bytes matching +0x58..0xA8. The offsets fit all samples, but public settings are still default-valued in the available snapshots. The settings/statistics bindings remain candidates; other block meanings are not assigned.',
-    };
-  }
-  if (id === 12 && version === 3 && data.length === 1825) {
-    return {
-      activeSetsCandidate: Array.from({ length: 5 }, (_, index) => {
-        const offset = index * 333;
-        return {
-          index,
-          offset,
-          activeBlueMageActionIds: [...data.subarray(offset, offset + 24)],
-          name: string(data.subarray(offset + 24, offset + 85)),
-          standardHotbars: Array.from({ length: 10 }, (_, bar) => [
-            ...data.subarray(offset + 85 + bar * 12, offset + 97 + bar * 12),
-          ]),
-          crossHotbars: Array.from({ length: 8 }, (_, bar) => [
-            ...data.subarray(offset + 205 + bar * 16, offset + 221 + bar * 16),
-          ]),
-          macroFlagMaskCandidateHex: data
-            .subarray(1665 + index * 32, 1697 + index * 32)
-            .toString('hex'),
-        };
-      }),
-      note: 'Five packed 333-byte action/name/hotbar sets plus 160 bytes consume this version exactly. The final 32-byte-per-set macro flag masks are candidates; bit ordering is not verified.',
-    };
-  }
-  if (id === 22 && version === 102 && data.length === 1376) {
-    return {
-      headerHex: data.subarray(0, 8).toString('hex'),
-      retainersCandidate: Array.from({ length: 10 }, (_, index) => {
-        const offset = 8 + index * 136;
-        return {
-          index,
-          offset,
-          id: data.readBigUInt64LE(offset).toString(),
-          comment: string(data.subarray(offset + 8, offset + 99)),
-          unusedRecordBytesHex: data
-            .subarray(offset + 99, offset + 136)
-            .toString('hex'),
-        };
-      }),
-      trailerHex: data.subarray(1368).toString('hex'),
+      note: 'Block 2 is the native 16-byte EmjModule+0x48 settings image; named public fields are confirmed by serialization and UI consumers. savedSettings retains byte values; settings applies native load guards. Blocks 3/4 are voice/costume seen bitmaps with ID-minus-one indexing. Private settings bytes and statistics meanings remain unresolved. settingsCandidate is retained as a compatibility alias.',
     };
   }
   return null;
@@ -228,6 +216,9 @@ export function decodeAdditionalUiSegment(
   data: Buffer,
 ): Record<string, unknown> | null {
   if (id === 13) return decodeNativeCwls(version, data);
+  if (id === 4) return decodeNativeSocial(version, data);
+  if (id === 12) return decodeNativeAoz(version, data);
+  if (id === 22) return decodeNativeRetainerComments(version, data);
   const native = decodeNativeUiSegment(id, version, data);
   if (native) return native;
   const decoded = decodeAdditionalUiSegmentData(id, version, data);
@@ -245,22 +236,29 @@ export function decodeAdditionalUiSegment(
   const meaning = (field: string, reason: string) =>
     unknownFields.push({ field, reason, kind: 'meaning' });
   let knownFields: string[] = [];
-  let candidateFields: string[] = [];
+  const candidateFields: string[] = [];
   switch (id) {
     case 1:
-      knownFields = ['retainerCount', 'tasks.retainerId'];
-      candidateFields = ['tasks.completionUnixCandidate'];
-      storage('unknownHeaderHex');
-      meaning(
-        'tasks.unknown',
-        '任务记录尾部的 u32 尚无非零样本或源码字段对应。',
+      knownFields = [
+        'savedEntryCount',
+        'retainerCount',
+        'tasks.isStoredEntry',
+        'tasks.retainerId',
+        'tasks.completionUnix',
+      ];
+      storage(
+        'reservedHeaderHex / unknownHeaderHex',
+        '客户端只读写首字节数量，偏移1至7为前导填充；原值完整保留。',
+      );
+      storage(
+        'tasks.reservedTailHex / tasks.unknown',
+        '写入器清零每条记录尾部4字节，读取器不将其加入任务映射；保留原值。',
       );
       decoded.note =
-        '雇员数量和64位ID已与同角色的ITEMFDR/ITEMODR缓存交叉核对；时间数值保留，尚不能确定它代表完成、派遣还是更新。';
+        '静态调用链确认时间来自RetainerManager.Retainer.VentureComplete；客户端以此时间跨过当前秒触发完成通知。数据是本地保存快照；Candidate字段仅为旧输出兼容别名，不再表示此项仍为推断。';
       break;
     case 2: {
       knownFields = ['patchMarkVersions', 'patchMarkStates', 'uiFlags'];
-      candidateFields = ['namedFlagsCandidate'];
       const flags = decoded.uiFlags as number[];
       decoded.namedFlags = {
         summonedCompanionId: flags[1],
@@ -274,7 +272,28 @@ export function decodeAdditionalUiSegment(
         actionsAndTraitsCompactView: flags[16] <= 1 ? flags[16] !== 0 : null,
         hidePortraitUpdatePreview: flags[21] <= 1 ? flags[21] !== 0 : null,
       };
-      candidateFields.push('namedFlags');
+      // Target 0x1407f8c90 writer maps module+0x1ac to file+128;
+      // 0x1407f8e25 reader copies block 2 back to that same array.
+      // Names/indices are from FlagStatusModule.cs b72bc1f73 remarks.
+      // This is a static storage/source match, not a runtime observation.
+      knownFields.push(
+        ...Object.keys(decoded.namedFlags as Record<string, unknown>).map(
+          (field) => `namedFlags.${field}`,
+        ),
+      );
+      decoded.namedFlagsBasis =
+        '目标客户端writer 0x1407f8c90 / reader 0x1407f8d80确认UIFlags数组偏移；字段名和8个索引来自FFXIVClientStructs b72bc1f73 FlagStatusModule.cs；未进行游戏运行时验证。';
+      for (const [field, rawIndex] of [
+        ['hideMentorRenewDialogue', 11],
+        ['actionsAndTraitsCompactView', 16],
+        ['hidePortraitUpdatePreview', 21],
+      ] as const) {
+        if (flags[rawIndex] > 1)
+          meaning(
+            `namedFlags.${field}`,
+            `索引${rawIndex}出现0/1之外的布尔原值，uiFlags与兼容候选字段保留原值，未将其当作true。`,
+          );
+      }
       meaning(
         'uiFlags.unlistedIndices',
         '源码只给出1、10、11、13、14、15、16、21的含义，其余索引值均保留但不能命名。',
@@ -283,28 +302,12 @@ export function decodeAdditionalUiSegment(
       storage('uiFlagsHeaderHex');
       break;
     }
-    case 4:
-      candidateFields = [
-        'groupLabelsCandidate',
-        'contactRecordsCandidate.name',
-        'contactRecordsCandidate.contentIdCandidate',
-      ];
-      storage('header[0..20]');
-      meaning(
-        'socialDataAfterContactRecords[3688..46080]',
-        '此版本还含其他社交块，当前源码只定义动态运行时MuteList，无法确认磁盘块类别与边界。',
-      );
-      meaning(
-        'contactRecordsCandidate.unknownAfterContentIdHex',
-        '联系人后24字节无已核对的字段对应。',
-      );
-      break;
     case 11:
       knownFields = ['chunks.key', 'chunks.length', 'chunks.dataHex'];
       for (const chunk of decoded.chunks as Record<string, unknown>[]) {
         const content = chunk.data as Record<string, unknown> | undefined;
-        if (chunk.key === 2 && content?.settingsCandidate) {
-          candidateFields.push(
+        if (chunk.key === 2 && content?.settings) {
+          knownFields.push(
             ...[
               'tileSet',
               'hideHints',
@@ -318,22 +321,51 @@ export function decodeAdditionalUiSegment(
               'disableCharacterVoices',
               'emjVoiceNpc',
               'emjCostumeId',
-            ].map((field) => `chunks[key=2].data.settingsCandidate.${field}`),
+            ].map((field) => `chunks[key=2].data.settings.${field}`),
           );
           meaning(
-            'chunks[key=2].data.settingsCandidate.unknownSettingsByte4/5',
-            '源码EmjModule将0x4C/0x4D定义为私有未知字节；不能命名成开关。',
+            'chunks[key=2].data.settings.unknownSettingsByte4/5',
+            '原生读写确认对应EmjModule+0x4C/0x4D，但业务用途仍未确认，原值保留。',
           );
           storage(
-            'chunks[key=2].data.settingsCandidate.unknownTailHex',
+            'chunks[key=2].data.settings.unknownTailHex',
             '设置块末尾两字节在源码设置字段范围之外，原始值保留。',
           );
+          const settings = content.settings as Record<string, unknown>;
+          for (const field of [
+            'hideHints',
+            'hideDangerousTileMarker',
+            'hideChatLog',
+            'showHighResolutionLayout',
+          ]) {
+            if (settings[field] === null)
+              meaning(
+                `chunks[key=2].data.settings.${field}`,
+                '该布尔字节不是0/1，原生读入未规范化此字段；已保留savedSettings原值，未将任意非零值当作true。',
+              );
+          }
+        } else if (
+          (chunk.key === 3 && content?.seenVoiceNpcIds) ||
+          (chunk.key === 4 && content?.seenCostumeIds)
+        ) {
+          knownFields.push(
+            `chunks[key=${chunk.key}].data.${chunk.key === 3 ? 'seenVoiceNpcIds' : 'seenCostumeIds'}`,
+            `chunks[key=${chunk.key}].data.seenBitflagsHex`,
+            `chunks[key=${chunk.key}].data.idMeaning`,
+          );
+          storage(
+            `chunks[key=${chunk.key}].data.reservedBitsHex`,
+            '目标客户端的已查看查询拒绝其余位对应的编号，原始保存位保留。',
+          );
         } else if (chunk.key === 0 && content?.statisticsCandidate) {
+          knownFields.push(
+            'chunks[key=0].data.statisticsCandidate.historyEntries (5 x 16-byte records)',
+          );
           candidateFields.push(
             'chunks[key=0].data.statisticsCandidate.timestampCandidate',
           );
           meaning(
-            'chunks[key=0].data.statisticsCandidate.unknownValue/historyValues',
+            'chunks[key=0].data.statisticsCandidate.historyEntries.valueRaw/timeRaw',
             '对应源码Unk58和Unk68历史数组，数值类型可读，但统计项目的含义尚未定义。',
           );
           storage('chunks[key=0].data.statisticsCandidate.unknownGapHex');
@@ -349,26 +381,6 @@ export function decodeAdditionalUiSegment(
           'zeroPaddingHex',
           '记录块后仍有全零尾区，未把它解释成业务字段。',
         );
-      break;
-    case 12:
-      candidateFields = [
-        'activeSetsCandidate.activeBlueMageActionIds',
-        'activeSetsCandidate.name',
-        'activeSetsCandidate.standardHotbars',
-        'activeSetsCandidate.crossHotbars',
-      ];
-      meaning(
-        'activeSetsCandidate.macroFlagMaskCandidateHex',
-        '尾部160字节与5组各32字节对应，但位顺序及标志含义尚未通过读写函数验证。',
-      );
-      break;
-    case 22:
-      candidateFields = ['retainersCandidate.id', 'retainersCandidate.comment'];
-      storage('headerHex');
-      storage('retainersCandidate.unusedRecordBytesHex');
-      storage('trailerHex');
-      decoded.note =
-        '结构定义明确给出ID与91字节备注字段，记录步长与样本一致；现有样本所有ID均为零，未验证非空备注关联。';
       break;
   }
   return {

@@ -228,3 +228,113 @@ test('general settings stay editable even when a category also contains record l
   ]);
   assert.equal(category.children[1].editTarget.prefixes[0], 'ui.0.term.7.');
 });
+
+test('decoded two-bit emote states get stable read-only identities instead of an editable unseen-slot alias', () => {
+  const root = buildFileNode(
+    detail('UISAVE.DAT', {
+      segments: [
+        {
+          id: 8,
+          name: 'EMTH',
+          data: {
+            history: [1],
+            favorites: [2],
+            emoteStates: [
+              {
+                emoteId: 1,
+                state: 2,
+                stateName: '已解锁未查看',
+                isUnseen: true,
+                isSeen: false,
+              },
+              {
+                emoteId: 7,
+                state: 3,
+                stateName: '已查看',
+                isUnseen: false,
+                isSeen: true,
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+  const states = root.children[0].children.find(
+    (node) => node.key === 'section:8-states',
+  );
+  assert(states);
+  assert.deepEqual(
+    states.children.map((node) => node.key),
+    ['emote:1', 'emote:7'],
+  );
+  assert(
+    states.children.every(
+      (node) => !node.editTarget.ids.length && !node.editTarget.prefixes.length,
+    ),
+  );
+});
+
+test('group-pose light records keep distinct edit targets after XYZ decoding', async () => {
+  const { decodeNativeGroupPose } =
+    await import('../src/main/services/dat/uisave-pose.ts');
+  const data = decodeNativeGroupPose(100, Buffer.alloc(240));
+  const root = buildFileNode(
+    detail('UISAVE.DAT', { segments: [{ id: 15, name: 'GRPPOS', data }] }),
+  );
+  const category = root.children[0];
+  const lights = category.children.filter((row) =>
+    row.editTarget.prefixes?.[0]?.includes('.light.'),
+  );
+  assert.equal(new Set(lights.map((row) => row.key)).size, 3);
+  assert.deepEqual(
+    lights.map((row) => row.editTarget.prefixes),
+    [['ui.0.light.0.'], ['ui.0.light.1.'], ['ui.0.light.2.']],
+  );
+});
+
+test('quick-panel icons are read-only while sparse slots retain their physical edit identities', () => {
+  const root = buildFileNode(
+    detail('UISAVE.DAT', {
+      segments: [
+        {
+          id: 41,
+          name: 'QPNL',
+          data: {
+            panels: Array.from({ length: 4 }, (_, index) => ({
+              index,
+              usesDefaultIcon: true,
+              defaultIconId: 695 + index,
+              iconCommandType: 0,
+              iconCommandId: 0,
+              slots:
+                index === 2
+                  ? [
+                      { slot: 7, commandType: 6, commandId: 3 },
+                      { slot: 24, commandType: 1, commandId: 9 },
+                    ]
+                  : [],
+            })),
+          },
+        },
+      ],
+    }),
+  );
+  const category = root.children[0];
+  const icons = category.children.find(
+    (node) => node.key === 'section:quick-panel-icons',
+  );
+  assert.equal(new Set(icons.children.map((node) => node.key)).size, 4);
+  assert(
+    icons.children.every(
+      (node) => !node.editTarget.ids.length && !node.editTarget.prefixes.length,
+    ),
+  );
+  const slots = category.children.find(
+    (node) => node.key === 'section:quick-panel-2-slots',
+  );
+  assert.deepEqual(
+    slots.children.map((node) => node.editTarget.prefixes),
+    [['ui.0.panel.2.7.'], ['ui.0.panel.2.24.']],
+  );
+});

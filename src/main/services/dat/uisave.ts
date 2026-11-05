@@ -1,10 +1,12 @@
 import type { DatDecodeResult } from './types.ts';
 import { decodeTofu } from './uisave-tofu.ts';
 import { decodeBanners } from './uisave-banner.ts';
+import { decodeNativeGroupPose } from './uisave-pose.ts';
 import { decodeAdditionalUiSegment } from './uisave-other.ts';
 import { decodeRemainingUiSegment } from './uisave-remaining.ts';
 import { segmentCoverage, coverageStatus } from './coverage.ts';
 import { decodeUiRecords } from './uisave-records.ts';
+import targetData from './native-save-data.json' with { type: 'json' };
 
 // Names and field candidates follow FFXIVClientStructs b72bc1f73,
 // Client/UI/Misc/UiSavePackModule.cs and the corresponding *Module.cs files.
@@ -187,11 +189,39 @@ function interpretSegment(
     });
   }
   if (id === 8 && version === 102 && data.length === 310) {
+    // Target SHA-256 958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9.
+    // 0x140802ad0: (EmoteId - 1), four two-bit states per byte.
+    // 0x140802b10 tests state == 2; 0x140802b60 marks it 3 (seen).
+    // 0x140802950 refreshes 0/1 into 1 (locked), 2 (newly unlocked),
+    // or 3 (already available before the patch cutoff). Zero is not a lock bit.
+    const stateNames = [
+      '未初始化/未参与显示',
+      '上次刷新时未解锁',
+      '已解锁未查看',
+      '已查看',
+    ];
+    const emoteStates = Array.from({ length: 1024 }, (_, index) => {
+      const state = (data[54 + (index >> 2)] >> ((index & 3) * 2)) & 3;
+      return {
+        emoteId: index + 1,
+        state,
+        stateName: stateNames[state],
+        isUnseen: state === 2,
+        isSeen: state === 3,
+      };
+    });
     return parsedRecord({
       unknownPrefixHex: data.subarray(0, 2).toString('hex'),
       history: uints(data, 2, 6),
       favorites: uints(data, 14, 20),
       seenEmotesBitmaskHex: data.subarray(54).toString('hex'),
+      emoteStates,
+      unseenEmoteIds: emoteStates
+        .filter((entry) => entry.isUnseen)
+        .map((entry) => entry.emoteId),
+      seenEmoteIds: emoteStates
+        .filter((entry) => entry.isSeen)
+        .map((entry) => entry.emoteId),
     });
   }
   if ((id === 9 || id === 10) && version === 102 && data.length === 84) {
@@ -213,32 +243,9 @@ function interpretSegment(
       unknownSuffixHex: data.subarray(62).toString('hex'),
     });
   }
-  if (id === 15 && version === 100 && data.length === 240) {
-    const vector = (offset: number) =>
-      Array.from({ length: 4 }, (_, i) => data.readFloatLE(offset + i * 4));
-    return parsedRecord({
-      cameraAngle: data.readFloatLE(12),
-      cameraRotation: data.readFloatLE(32),
-      cameraPositionCandidate: vector(48),
-      isCharacterOrientedCameraRaw: data[64],
-      lights: Array.from({ length: 3 }, (_, index) => {
-        const offset = 80 + index * 48;
-        return {
-          index,
-          offset,
-          enabledRaw: data[offset],
-          red: data.readFloatLE(offset + 4),
-          green: data.readFloatLE(offset + 8),
-          blue: data.readFloatLE(offset + 12),
-          type: data.readUInt32LE(offset + 16),
-          position: vector(offset + 32),
-        };
-      }),
-      isCharacterOrientedLightRaw: data[224],
-      isManualBrightnessEnabledRaw: data[225],
-      manualBrightness: data.readFloatLE(228),
-      characterLighting: data[232],
-    });
+  if (id === 15) {
+    const pose = decodeNativeGroupPose(version, data);
+    if (pose) return parsedRecord(pose);
   }
   if (id === 17 && version === 101 && data.length === 3140) {
     // Disk start +16 / stride 104 agrees with the historical reader and
@@ -413,11 +420,34 @@ function interpretSegment(
             f.tag === ['A', '0', '1'][i % 3] && f.length === [4, 1, 1][i % 3],
         )
       ) {
-        result.actions = Array.from({ length: parsed.length / 3 }, (_, i) => ({
-          actionId: value(parsed[i * 3]).readUInt32LE(),
-          flag0: value(parsed[i * 3 + 1])[0],
-          flag1: value(parsed[i * 3 + 2])[0],
-        }));
+        // Same target SHA as EMTH above. 0x140811b10 writes tag 0/1 from
+        // settings +1/+3; 0x140811dc0 reads them, gated by support +0/+2.
+        // 0x140be7951 consumes +1 as action-change enablement and +3 to apply
+        // the anti-misactivation delay at +0xc. UI 15785/15786 names each.
+        const settings: Record<
+          string,
+          (typeof targetData.actionSettings)['92']
+        > = targetData.actionSettings;
+        result.actionSettingReferenceSource = {
+          ...targetData.source.publicTextSource,
+          sheet: 'ActionSetting',
+          note: '公开参考表；本次未从目标客户端资源重新提取，不代替运行时设置。',
+        };
+        result.actions = Array.from({ length: parsed.length / 3 }, (_, i) => {
+          const actionId = value(parsed[i * 3]).readUInt32LE();
+          const flag0 = value(parsed[i * 3 + 1])[0];
+          const flag1 = value(parsed[i * 3 + 2])[0];
+          return {
+            actionId,
+            flag0,
+            flag1,
+            actionChangeEnabled: flag0 <= 1 ? flag0 === 1 : null,
+            antiMisactivationEnabled: flag1 <= 1 ? flag1 === 1 : null,
+            // Alias IDs can resolve to another action's settings at runtime
+            // (0x1408124b0). These are the stored values, not alias resolution.
+            settingReference: settings[String(actionId)] ?? null,
+          };
+        });
       }
       return parsedRecord(result);
     }

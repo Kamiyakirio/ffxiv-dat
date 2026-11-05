@@ -20,6 +20,7 @@ import type {
 import App from '../src/renderer/App';
 import DecodedContent from '../src/renderer/components/DecodedContent';
 import JsonTree from '../src/renderer/components/JsonTree';
+import DatEditor from '../src/renderer/components/DatEditor';
 import { readableSections } from '../src/main/services/dat/readable';
 
 afterEach(() => {
@@ -232,6 +233,7 @@ test('file search includes purpose, scope and backups without flattening backup 
     }),
   ]);
   await start();
+  assert(document.querySelector('.file-catalog .file-records.compact-records'));
   fireEvent.change(ui().getByLabelText('搜索文件'), {
     target: { value: '肖像' },
   });
@@ -606,6 +608,7 @@ test('UISAVE exposes categories as pages and each portrait has all its own detai
   assert.equal(ui().queryByLabelText('配置类别'), null);
   await openRow(/^肖像/);
   assert.equal(pageHeading().textContent, '肖像');
+  assert(document.querySelector('.compact-records'));
   await openRow(/^肖像 8/);
   assert.equal(pageHeading().textContent, '肖像 8');
   assert.equal(
@@ -631,6 +634,7 @@ test('UISAVE exposes categories as pages and each portrait has all its own detai
   assert.equal(pageHeading().textContent, '肖像 8');
   fireEvent.click(ui().getByRole('button', { name: '返回肖像' }));
   assert.equal(pageHeading().textContent, '肖像');
+  assert(document.querySelector('.compact-records'));
 });
 
 test('board pages lead to individual object pages and keep unknown arguments in technical data', async () => {
@@ -737,7 +741,9 @@ test('gearset and equipment pages edit their own fields and name lookup selects 
   ]);
   await start();
   await openFile('GEARSET.DAT');
+  assert(document.querySelector('.compact-records'));
   await openRow(/^套装 A/);
+  assert(document.querySelector('.compact-records'));
   await openRow(/^副手/);
   assert.match(
     ui().getByRole('region', { name: '装备信息' }).textContent ?? '',
@@ -767,6 +773,11 @@ test('macro list pagination, body search, empty slots and standalone body copyin
   const view = render(
     <DecodedContent detail={detail('MACRO.DAT', { macros })} />,
   );
+  assert(view.container.querySelector('.compact-records'));
+  assert.equal(view.container.querySelectorAll('.record-link').length, 21);
+  fireEvent.change(view.getByLabelText('每页条数'), {
+    target: { value: '20' },
+  });
   assert.equal(view.container.querySelectorAll('.record-link').length, 20);
   fireEvent.click(view.getByRole('button', { name: '下一页' }));
   assert.equal(view.container.querySelectorAll('.record-link').length, 1);
@@ -810,7 +821,9 @@ test('hotbar groups, bars and slots form separate pages with human command names
       })}
     />,
   );
+  assert(view.container.querySelector('.compact-records'));
   fireEvent.click(view.getByRole('button', { name: /共享热键栏/ }));
+  assert(view.container.querySelector('.compact-records'));
   fireEvent.click(view.getByRole('button', { name: /热键栏 6/ }));
   fireEvent.click(view.getByRole('button', { name: /槽位 6/ }));
   assert.match(
@@ -948,4 +961,164 @@ test('JSON trees stay lazy, page long arrays and expand long text', () => {
   assert.match(view.container.textContent ?? '', /79/);
   fireEvent.click(view.getByRole('button', { name: /展开文本/ }));
   assert.match(view.container.textContent ?? '', new RegExp('x'.repeat(500)));
+});
+
+test('large simple lists use compact rows and keep page size, search and sparse edit targets', () => {
+  const onEdit = mock.fn();
+  const view = render(
+    <DecodedContent
+      detail={detail('ITEMFDR.DAT', {
+        glamourDresser: {
+          itemIds: Array.from({ length: 795 }, (_, i) => (i === 0 ? 0 : 1)),
+        },
+      })}
+      onEdit={onEdit}
+    />,
+  );
+  fireEvent.click(view.getByRole('button', { name: /^投影台/ }));
+  const records = () =>
+    view.container.querySelectorAll('.compact-records .record-link');
+  assert.equal(records().length, 60);
+  assert.equal(view.container.querySelector('.detail-sections'), null);
+  assert.match(
+    view.container.querySelector('.pagination')?.textContent ?? '',
+    /1 \/ 14/,
+  );
+  fireEvent.click(view.getByRole('button', { name: '下一页' }));
+  assert.match(records()[0].textContent ?? '', /槽位：62/);
+  fireEvent.change(view.getByLabelText('每页条数'), {
+    target: { value: '120' },
+  });
+  assert.equal(records().length, 120);
+  assert.match(
+    view.container.querySelector('.pagination')?.textContent ?? '',
+    /1 \/ 7/,
+  );
+  fireEvent.click(records()[0]);
+  fireEvent.click(view.getByRole('button', { name: '编辑' }));
+  assert.deepEqual(onEdit.mock.calls[0].arguments[0].ids, ['finder.dresser1']);
+  fireEvent.click(view.getByRole('button', { name: '返回投影台' }));
+  assert.equal(
+    (view.getByLabelText('每页条数') as HTMLSelectElement).value,
+    '120',
+  );
+  fireEvent.change(view.getByLabelText('搜索当前列表'), {
+    target: { value: '槽位：795' },
+  });
+  assert.equal(records().length, 1);
+  assert.equal(view.queryByRole('button', { name: '下一页' }), null);
+  fireEvent.click(records()[0]);
+  fireEvent.click(view.getByRole('button', { name: '编辑' }));
+  assert.deepEqual(onEdit.mock.calls[1].arguments[0].ids, [
+    'finder.dresser794',
+  ]);
+});
+
+test('settings and complex portrait lists both use compact navigation while preserving details', () => {
+  const view = render(
+    <DecodedContent detail={detail('COMMON.DAT', settingData)} />,
+  );
+  assert(view.container.querySelector('.compact-records'));
+  view.rerender(
+    <DecodedContent
+      detail={detail('UISAVE.DAT', {
+        segments: [
+          {
+            id: 23,
+            name: 'BANNER',
+            data: {
+              chunks: [
+                {
+                  records: [
+                    {
+                      recordIndex: 0,
+                      timelineName: '测试动作',
+                      cameraPosition: [1, 2, 3],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      })}
+    />,
+  );
+  fireEvent.click(view.getByRole('button', { name: /^肖像/ }));
+  assert(view.container.querySelector('.compact-records'));
+  fireEvent.click(view.getByRole('button', { name: /^肖像 1/ }));
+  assert.equal(view.getByRole('heading', { level: 2 }).textContent, '肖像 1');
+});
+
+test('portrait lists show all 53 summaries by default and retain five-section detail navigation', () => {
+  const view = render(
+    <DecodedContent
+      detail={detail('UISAVE.DAT', {
+        segments: [
+          {
+            id: 23,
+            name: 'BANNER',
+            data: {
+              chunks: [
+                {
+                  records: Array.from({ length: 53 }, (_, recordIndex) => ({
+                    recordIndex,
+                    timelineName: `动作 ${recordIndex + 1}`,
+                    backgroundName: '四边形',
+                    cameraPosition: [1, 2, 3],
+                  })),
+                },
+              ],
+            },
+          },
+        ],
+      })}
+    />,
+  );
+  fireEvent.click(view.getByRole('button', { name: /^肖像/ }));
+  assert.equal(
+    view.container.querySelectorAll('.compact-records .record-link').length,
+    53,
+  );
+  assert.equal(view.queryByRole('button', { name: '下一页' }), null);
+  fireEvent.click(view.getByRole('button', { name: /^肖像 53/ }));
+  assert.equal(view.getByRole('heading', { level: 2 }).textContent, '肖像 53');
+  assert.equal(view.container.querySelectorAll('.detail-section').length, 5);
+  fireEvent.click(view.getByRole('button', { name: '返回肖像' }));
+  assert.equal(
+    view.container.querySelectorAll('.compact-records .record-link').length,
+    53,
+  );
+});
+
+test('editor fields use shared columns while long text and key bindings retain full width', () => {
+  const view = render(
+    <DatEditor
+      model={{
+        id: 'test',
+        sha256: 'abc',
+        notes: [],
+        fields: [
+          numberField('zoom', '镜头距离', 3, '镜头'),
+          numberField('light', '灯光亮度', 50, '灯光'),
+          textField('comment', '长备注', '示例', '说明', 512),
+          textField('keybind.0', '按键', '41.02,00.00', '按键', 20),
+        ],
+      }}
+      contextLabel="肖像 1"
+      onSaved={() => {}}
+      onCancel={() => {}}
+      onDirty={() => {}}
+      onSaving={() => {}}
+    />,
+  );
+  assert.equal(view.container.querySelectorAll('.editor-field').length, 4);
+  assert.equal(view.container.querySelectorAll('.editor-field-wide').length, 2);
+  assert(view.container.querySelectorAll('.editor-group-heading').length > 1);
+  fireEvent.change(view.getByLabelText('镜头距离'), { target: { value: '4' } });
+  assert.match(view.container.textContent ?? '', /修改前：3/);
+  assert.equal(
+    (view.getByLabelText('长备注') as HTMLInputElement).value,
+    '示例',
+  );
 });

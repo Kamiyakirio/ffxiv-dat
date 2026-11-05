@@ -44,7 +44,7 @@ function ReferencePicker({
     };
   }, [field.reference, query]);
   return (
-    <div className="reference-picker">
+    <div className={`reference-picker${open ? ' is-open' : ''}`}>
       <button
         className="text-button"
         disabled={disabled}
@@ -303,7 +303,7 @@ export default function DatEditor({
                       <h3 className="editor-group-heading">{field.group}</h3>
                     )}
                   <div
-                    className={`editor-field${changed ? ' changed' : ''}`}
+                    className={`editor-field${field.id.startsWith('keybind.') || (field.type === 'text' && (field.maxBytes ?? 0) > 120) ? ' editor-field-wide' : ''}${changed ? ' changed' : ''}`}
                     key={field.id}
                   >
                     <label htmlFor={`edit-${field.id}`}>
@@ -365,17 +365,21 @@ export default function DatEditor({
                           }
                         />
                       )}
-                      {field.displayValue && (
-                        <small className="muted">
-                          原值：{field.displayValue}
-                        </small>
-                      )}
-                      {field.reference && (
-                        <ReferencePicker
-                          field={field}
-                          disabled={saving}
-                          onChange={(value) => change(field, value)}
-                        />
+                      {(field.displayValue || field.reference) && (
+                        <div className="editor-field-meta">
+                          {field.displayValue && (
+                            <small className="muted">
+                              原值：{field.displayValue}
+                            </small>
+                          )}
+                          {field.reference && (
+                            <ReferencePicker
+                              field={field}
+                              disabled={saving}
+                              onChange={(value) => change(field, value)}
+                            />
+                          )}
+                        </div>
                       )}
                       {field.type === 'text' && (
                         <small className="muted">

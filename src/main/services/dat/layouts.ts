@@ -266,7 +266,10 @@ export function decodeGearset(
       headgearVisible: !!(flags & 8),
       weaponsVisible: !!(flags & 16),
       visorEnabled: !!(flags & 32),
-      unknownFlags: flags & 0xc2,
+      // Target 958b78e2..., 0x140bc53ed..5426 maps gear bit0x40 to
+      // BannerGearVisibilityFlag.HideVieraEars (mask0x8 in the checksum input).
+      hideVieraEars: !!(flags & 64),
+      unknownFlags: flags & 0x82,
       items,
       glassesIds: [record.readUInt16LE(0x1c0), record.readUInt16LE(0x1c2)],
     });

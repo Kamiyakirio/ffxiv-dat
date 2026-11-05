@@ -227,8 +227,14 @@ export function decodeUiRecords(
     const panelCount = list[0].bytes[0];
     const slotCount = list[1].bytes[0];
     if (panelCount !== 4 || slotCount !== 25) return null;
-    const flags = list[2].bytes.readUInt32LE();
-    const settings = list[3].bytes.readUInt16LE();
+    // Target SHA-256 958b78e278ad896493c484eb313ff605ab41edefef74f92b0ee078e69b281bf9.
+    // 0x140817b8e / 0x140817be9 serialize F0 from Settings+0x268 (u32),
+    // F1 from Flags+0x26c (u16). Reader 0x140818122 / 0x1408181bc agrees.
+    // 0x140c827fc closes on Settings bit0; 0x140c8340b maps bits1/2 to
+    // mouse position / drag restrictions. 0x140c81722 checks Flags bit0
+    // before showing help. V0/V1 map +0x26e/+0x26f (tint/open panel).
+    const settings = list[2].bytes.readUInt32LE();
+    const flags = list[3].bytes.readUInt16LE();
     const tint = list[4].bytes[0];
     const panelOpenIndex = list[5].bytes.readInt8();
     let cursor = 6;
@@ -244,8 +250,17 @@ export function decodeUiRecords(
         unknownP1 = p1.readUInt32LE();
       panels.push({
         index,
-        unknownP0,
-        unknownP1,
+        unknownP0, // Compatibility alias for iconCommandType.
+        unknownP1, // Compatibility alias for iconCommandId.
+        // Writer 0x140817d00/0x140817d53 and reader 0x1408183d5/
+        // 0x140818470 map P0/P1 to +0x248/+0x24c at stride 8.
+        // GetIconIdForSlot 0x1407cd490 reads this pair for QuickPanel,
+        // then dispatches by HotbarSlotType and the source command ID.
+        // Type zero selects default icon 0x2b7 + panel at 0x1407cd4de.
+        iconCommandType: unknownP0,
+        iconCommandId: unknownP1,
+        usesDefaultIcon: unknownP0 === 0,
+        defaultIconId: 0x2b7 + index,
         slots: Array.from({ length: slotCount }, (_, slot) => ({
           slot,
           type: types[slot],
@@ -253,18 +268,13 @@ export function decodeUiRecords(
           commandId: ids.readUInt32LE(slot * 4),
         })),
       });
-      unknown.push({
-        field: `panels[${index}].P0/P1`,
-        reason: '面板 P0/P1 两字段未在公开模块字段中找到对应含义。',
-        kind: 'meaning',
-      });
     }
     const extra = list.slice(cursor);
     unknown.push(...unknowns(extra));
     if (settings & ~7)
       unknown.push({
         field: 'settings',
-        reason: `设置中存在未定义的位 0x${(settings & ~7).toString(16)}。`,
+        reason: `设置中存在未定义的位 0x${((settings & ~7) >>> 0).toString(16)}。`,
         kind: 'meaning',
       });
     if (flags & ~1)
@@ -281,28 +291,34 @@ export function decodeUiRecords(
       flags,
       tint,
       panelOpenIndex,
+      openLastUsedPanel: panelOpenIndex < 0,
       closePanelUponExecutingActions: (settings & 1) !== 0,
       openPanelAtMouseCursorPosition: (settings & 2) !== 0,
       disableDraggingWithinCommandPanel: (settings & 4) !== 0,
       firstTimeHelpSeen: (flags & 1) !== 0,
       fields: retained(list),
+      note: '静态原生读写及UI消费者确认：F0为设置，F1为帮助标志；P0/P1为面板图标来源的快捷栏命令类型/编号，0类型使用默认图标；unknownP0/P1仅为兼容别名。',
       coverage: coverage(
         [
           'panelCount',
           'slotCount',
           'panels.slots.commandType',
           'panels.slots.commandId',
-        ],
-        [
+          'panels.iconCommandType',
+          'panels.iconCommandId',
+          'panels.usesDefaultIcon',
+          'panels.defaultIconId',
           'settings',
           'flags',
           'tint',
           'panelOpenIndex',
+          'openLastUsedPanel',
           'closePanelUponExecutingActions',
           'openPanelAtMouseCursorPosition',
           'disableDraggingWithinCommandPanel',
           'firstTimeHelpSeen',
         ],
+        [],
         unknown,
       ),
     };

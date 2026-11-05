@@ -20,6 +20,10 @@ test('CWLS keeps four independent eight-slot groups and exact uint64 selections'
   assert.equal(decoded.groups.length, 4);
   for (let group = 0; group < 4; group++) {
     assert.equal(decoded.groups[group].index, group);
+    assert.equal(
+      decoded.groups[group].dataCenterIdForTargetClient,
+      101 + group,
+    );
     assert.equal(decoded.groups[group].slots.length, 8);
     assert.equal(
       decoded.groups[group].selectedLinkshellId,
@@ -52,6 +56,9 @@ test('CWLS preserves unmapped data, complete flags and reserved bytes without de
   assert.equal(decoded.unknownRemainderHex.length, 1152 * 2);
   assert.equal(decoded.tailFlagsRaw, 0xad);
   assert.equal(decoded.tailFlagsLowNibble, 0xd);
+  assert.equal(decoded.onlineMembersFirst, true);
+  assert.equal(decoded.unknownTailLowBits, 0xc);
+  assert.equal(decoded.tailFlagsHighBits, 0xa0);
   assert.equal(decoded.tailReservedHex, '01020304050607');
   assert.equal(coverageStatus(decoded.coverage), 'partial');
   assert.equal(decoded.coverage.structureComplete, true);
@@ -59,7 +66,24 @@ test('CWLS preserves unmapped data, complete flags and reserved bytes without de
     decoded.coverage.unknownFields
       .filter((entry) => entry.kind === 'meaning')
       .map((entry) => entry.field),
-    ['unknownRemainderHex', 'tailFlagsRaw / tailFlagsLowNibble'],
+    ['unknownRemainderHex', 'unknownTailLowBits'],
+  );
+});
+
+test('CWLS online-first setting reads only bit0 and does not conflate it with other saved flags', () => {
+  const data = Buffer.alloc(1456);
+  data[1448] = 0xfe;
+  const disabled = decodeNativeCwls(4, data);
+  assert.equal(disabled.onlineMembersFirst, false);
+  assert.equal(disabled.unknownTailLowBits, 14);
+  assert.equal(disabled.tailFlagsHighBits, 240);
+  data[1448] = 1;
+  const enabled = decodeNativeCwls(4, data);
+  assert.equal(enabled.onlineMembersFirst, true);
+  assert.equal(enabled.unknownTailLowBits, 0);
+  assert.equal(
+    enabled.coverage.knownFields.includes('onlineMembersFirst'),
+    true,
   );
 });
 

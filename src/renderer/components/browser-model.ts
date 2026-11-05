@@ -144,7 +144,10 @@ function sectionNode(
     const target = sectionEditTarget(detail, s, i),
       title = rowTitle(s, row, i);
     return {
-      key: target.ids?.[0] ?? target.prefixes?.[0] ?? `row:${i}`,
+      key:
+        target.ids?.[0] ??
+        target.prefixes?.[0] ??
+        (row.emoteId === undefined ? `row:${i}` : `emote:${row.emoteId}`),
       title,
       description: rowSummary(s, row, title),
       kind: 'record',
@@ -361,6 +364,7 @@ function gearsets(detail: DecodedFileDetail): BrowserNode[] {
             'flag8',
             'flag16',
             'flag32',
+            'flag64',
             'glasses0',
             'glasses1',
           ].map((key) => prefix + key),
@@ -374,6 +378,7 @@ function gearsets(detail: DecodedFileDetail): BrowserNode[] {
             ['显示头部装备', r.headgearVisible],
             ['显示武器', r.weaponsVisible],
             ['开启面罩', r.visorEnabled],
+            ['隐藏维埃拉族耳朵', r.hideVieraEars],
             ['眼镜', r.glassesNames],
             ['关联肖像', r.hasLinkedBanner ? `索引 ${r.bannerIndex}` : '无'],
           ]),
